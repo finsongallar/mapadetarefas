@@ -235,6 +235,29 @@ header{position:fixed;top:0;left:0;right:0;height:50px;background:var(--surface)
 .md-saved-item-del:hover{background:#fde8e8;color:#DC2626}
 .md-empty{padding:10px;font-size:12px;color:var(--muted);text-align:center}
 
+/* ── TOUR ── */
+.tour-backdrop{position:fixed;inset:0;z-index:800;pointer-events:none}
+.tour-highlight{position:fixed;box-shadow:0 0 0 9999px rgba(0,0,0,0.55);border-radius:10px;z-index:801;transition:all .35s cubic-bezier(.4,0,.2,1);pointer-events:none}
+.tour-box{position:fixed;z-index:802;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px 22px;width:290px;box-shadow:0 12px 40px rgba(0,0,0,.18);transition:all .3s cubic-bezier(.4,0,.2,1)}
+.tour-step-label{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px}
+.tour-title{font-family:'Syne',sans-serif;font-weight:700;font-size:15px;color:var(--text);margin-bottom:6px}
+.tour-desc{font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:16px}
+.tour-footer{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.tour-dots{display:flex;gap:5px}
+.tour-dot{width:6px;height:6px;border-radius:50%;background:var(--border);transition:background .2s}
+.tour-dot.active{background:var(--c-blue)}
+.tour-btns{display:flex;gap:8px}
+.tour-btn{padding:7px 14px;border-radius:8px;border:none;font-family:'Lato',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all .15s}
+.tour-btn-skip{background:transparent;color:var(--muted)}
+.tour-btn-skip:hover{color:var(--text)}
+.tour-btn-next{background:var(--c-blue);color:#fff}
+.tour-btn-next:hover{background:#1d4ed8}
+.tour-arrow{position:absolute;width:10px;height:10px;background:var(--surface);border:1px solid var(--border);transform:rotate(45deg)}
+.tour-arrow.left{left:-6px;top:50%;margin-top:-5px;border-right:none;border-top:none}
+.tour-arrow.right{right:-6px;top:50%;margin-top:-5px;border-left:none;border-bottom:none}
+.tour-arrow.bottom{bottom:-6px;left:50%;margin-left:-5px;border-left:none;border-top:none}
+.tour-arrow.top{top:-6px;left:50%;margin-left:-5px;border-right:none;border-bottom:none}
+
 /* ── ZOOM ── */
 .zoom-bar{position:fixed;bottom:18px;right:18px;display:flex;align-items:center;gap:4px;background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:5px 8px;z-index:300;box-shadow:0 2px 8px rgba(0,0,0,.06)}
 .zoom-bar button{width:26px;height:26px;border:none;background:transparent;border-radius:5px;font-size:16px;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .12s}
@@ -304,6 +327,7 @@ header{position:fixed;top:0;left:0;right:0;height:50px;background:var(--surface)
   <input class="map-title" id="map-title" value="Finanças Pessoais" oninput="syncMenuTitle()" />
 
   <div class="hdr-r">
+    <span style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;white-space:nowrap">Layout</span>
     <div class="style-toggle">
       <button class="active" id="st-filled"   onclick="setGlobalStyle('filled')">Preenchido</button>
       <button               id="st-outlined" onclick="setGlobalStyle('outlined')">Só borda</button>
@@ -322,8 +346,26 @@ header{position:fixed;top:0;left:0;right:0;height:50px;background:var(--surface)
       </svg>
     </button>
     <button class="btn btn-primary" onclick="saveMap()">Salvar</button>
+    <button class="btn" onclick="startTour()" title="Tour guiado" style="padding:6px 10px">?</button>
   </div>
 </header>
+
+<!-- Tour overlay -->
+<div class="tour-backdrop" id="tour-backdrop" style="display:none"></div>
+<div class="tour-highlight" id="tour-highlight" style="display:none"></div>
+<div class="tour-box" id="tour-box" style="display:none">
+  <div class="tour-arrow" id="tour-arrow"></div>
+  <div class="tour-step-label" id="tour-step-label"></div>
+  <div class="tour-title" id="tour-title"></div>
+  <div class="tour-desc" id="tour-desc"></div>
+  <div class="tour-footer">
+    <div class="tour-dots" id="tour-dots"></div>
+    <div class="tour-btns">
+      <button class="tour-btn tour-btn-skip" onclick="endTour()">Pular</button>
+      <button class="tour-btn tour-btn-next" id="tour-next-btn" onclick="tourNext()">Próximo →</button>
+    </div>
+  </div>
+</div>
 
 <div class="toolbar">
   <button class="tool-btn" id="tb-select" onclick="setTool('select')">
@@ -409,17 +451,15 @@ header{position:fixed;top:0;left:0;right:0;height:50px;background:var(--surface)
       <div class="ai-label">Modelo</div>
       <div class="ai-model-row">
         <button class="ai-model-btn active" id="model-claude" onclick="selectModel('claude')">◆ Claude</button>
-        <button class="ai-model-btn"        id="model-gpt"   onclick="selectModel('gpt')">⬡ ChatGPT</button>
+        <button class="ai-model-btn" id="model-gpt" disabled style="opacity:.45;cursor:not-allowed;position:relative">
+          ⬡ ChatGPT
+          <span style="position:absolute;top:-7px;right:-4px;background:var(--c-orange);color:#fff;font-size:9px;font-weight:700;padding:2px 5px;border-radius:20px;letter-spacing:.04em">Em breve</span>
+        </button>
       </div>
-    </div>
-    <div class="gpt-key-row" id="gpt-key-row">
-      <div class="ai-label">Chave API OpenAI</div>
-      <input id="gpt-api-key" type="password" placeholder="sk-..." />
-      <div class="gpt-key-note">Usada só nessa sessão, não é salva.</div>
     </div>
     <div>
       <div class="ai-label">Descreva seu plano ou ideia</div>
-      <textarea class="ai-textarea" id="ai-prompt" placeholder="Ex: Quero lançar um app de delivery em Taubaté. Preciso organizar produto, marketing, tecnologia e finanças nos próximos 3 meses..."></textarea>
+      <textarea class="ai-textarea" id="ai-prompt" placeholder="Ex: Quero abrir uma cafeteria no bairro. Preciso pensar no espaço, cardápio, fornecedores, redes sociais e quanto vou precisar investir..."></textarea>
     </div>
     <div>
       <div class="ai-label">Exemplos rápidos</div>
@@ -434,6 +474,12 @@ header{position:fixed;top:0;left:0;right:0;height:50px;background:var(--surface)
     <button class="ai-generate-btn" id="ai-gen-btn" onclick="generateMap()">
       <div class="btn-spinner"></div>
       <span class="btn-label">✦ Gerar Mapa Agora</span>
+    </button>
+    <!-- Evolve button — aparece depois de gerar -->
+    <button class="ai-generate-btn" id="ai-evolve-btn" onclick="evolveMap()"
+      style="display:none;background:#7C3AED;margin-top:6px">
+      <div class="btn-spinner"></div>
+      <span class="btn-label">⟳ Evoluir este Mapa</span>
     </button>
     <div class="ai-status" id="ai-status"></div>
     <div class="ai-result-box" id="ai-result-box"></div>
@@ -1162,8 +1208,10 @@ function generateMap() {
     rb.classList.add('visible');
 
     buildMapFromData(mapData);
-    setAIStatus('Mapa gerado com sucesso! ' + String.fromCharCode(10003), 'success');
+    setAIStatus('Mapa gerado com sucesso! ✓', 'success');
     hideExamplePopup();
+    // Show evolve button
+    document.getElementById('ai-evolve-btn').style.display = 'flex';
     setTimeout(function(){ document.getElementById('ai-panel').classList.remove('open'); }, 1500);
   }).catch(function(err) {
     console.error(err);
@@ -1174,13 +1222,30 @@ function generateMap() {
 }
 
 function callClaude(prompt) {
-  return fetch('/api/generate', {
+  var SYSTEM = [
+    'Voce e um assistente especializado em mapas mentais.',
+    'Gere um mapa mental em JSON valido. Responda APENAS o JSON, sem markdown, sem explicacao.',
+    'Formato:',
+    '{"root":"Nome central (ate 4 palavras)","branches":[{"label":"Area","children":["item1","item2"]}]}',
+    'Regras: 4 a 7 branches, 2 a 5 filhos por branch, labels curtos (4-5 palavras), portugues brasileiro.'
+  ].join(' ');
+
+  return fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ prompt: prompt })
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1000,
+      system: SYSTEM,
+      messages: [{ role:'user', content: prompt }]
+    })
   }).then(function(r) {
-    if (!r.ok) return r.json().then(function(e){ throw new Error(e.error || 'Erro ' + r.status); });
+    if (!r.ok) throw new Error('Erro API Claude: ' + r.status);
     return r.json();
+  }).then(function(data) {
+    var text = data.content.map(function(b){ return b.text || ''; }).join('');
+    text = text.replace(/```json|```/g,'').trim();
+    return JSON.parse(text);
   });
 }
 
@@ -1201,6 +1266,139 @@ function callGPT(prompt, apiKey) {
       return JSON.parse(data.choices[0].message.content);
     });
   });
+}
+
+// ─────────────────────────────────────────────
+// TOUR
+// ─────────────────────────────────────────────
+var tourStep = 0;
+var TOUR_STEPS = [
+  {
+    selector: '.logo',
+    title: 'Bem-vindo ao Mapa de Tarefas',
+    desc: 'Aqui você organiza qualquer ideia visualmente — projetos, metas, planos. Deixa eu te mostrar como funciona.',
+    arrow: 'bottom', pos: 'below'
+  },
+  {
+    selector: '#maps-menu-btn',
+    title: 'Seus mapas',
+    desc: 'Aqui você cria novos mapas, acessa os salvos e duplica o atual. Tudo em um clique.',
+    arrow: 'top', pos: 'below'
+  },
+  {
+    selector: '#tb-pan',
+    title: 'Mover a tela',
+    desc: 'Clique e arraste para navegar pelo mapa. Ideal quando ele crescer e precisar explorar as bordas.',
+    arrow: 'left', pos: 'right'
+  },
+  {
+    selector: '#tb-select',
+    title: 'Selecionar nós',
+    desc: 'Clique em qualquer nó para selecioná-lo. Duplo clique para editar o texto. Clique direito para mudar a cor.',
+    arrow: 'left', pos: 'right'
+  },
+  {
+    selector: '.style-toggle',
+    title: 'Layout dos nós',
+    desc: 'Alterne entre nós preenchidos com cor sólida ou só com borda. O modo só-borda fica ótimo para impressão.',
+    arrow: 'top', pos: 'below'
+  },
+  {
+    selector: '.btn-ia',
+    title: 'Gerar com IA',
+    desc: 'Descreva sua ideia em texto livre e a IA monta o mapa pra você automaticamente. Depois você pode evoluir o mapa com mais um clique.',
+    arrow: 'top', pos: 'below'
+  },
+  {
+    selector: '.dark-toggle',
+    title: 'Modo noite',
+    desc: 'Alterne entre tema claro e escuro. Sua preferência é salva automaticamente.',
+    arrow: 'top', pos: 'below'
+  },
+  {
+    selector: '.zoom-bar',
+    title: 'Zoom e navegação',
+    desc: 'Use + e − para aproximar ou afastar. O scroll do mouse também funciona. ⊙ centraliza tudo na tela.',
+    arrow: 'bottom', pos: 'above'
+  }
+];
+
+function startTour() {
+  tourStep = 0;
+  document.getElementById('tour-backdrop').style.display = 'block';
+  document.getElementById('tour-highlight').style.display = 'block';
+  document.getElementById('tour-box').style.display = 'block';
+  renderTourStep();
+}
+
+function endTour() {
+  document.getElementById('tour-backdrop').style.display = 'none';
+  document.getElementById('tour-highlight').style.display = 'none';
+  document.getElementById('tour-box').style.display = 'none';
+}
+
+function tourNext() {
+  tourStep++;
+  if (tourStep >= TOUR_STEPS.length) { endTour(); return; }
+  renderTourStep();
+}
+
+function renderTourStep() {
+  var step = TOUR_STEPS[tourStep];
+  var target = document.querySelector(step.selector);
+  if (!target) { tourNext(); return; }
+
+  var rect = target.getBoundingClientRect();
+  var pad  = 8;
+
+  // Highlight
+  var hl = document.getElementById('tour-highlight');
+  hl.style.left   = (rect.left - pad) + 'px';
+  hl.style.top    = (rect.top  - pad) + 'px';
+  hl.style.width  = (rect.width  + pad*2) + 'px';
+  hl.style.height = (rect.height + pad*2) + 'px';
+
+  // Box content
+  document.getElementById('tour-step-label').textContent = 'Passo ' + (tourStep+1) + ' de ' + TOUR_STEPS.length;
+  document.getElementById('tour-title').textContent = step.title;
+  document.getElementById('tour-desc').textContent  = step.desc;
+  document.getElementById('tour-next-btn').textContent = tourStep === TOUR_STEPS.length-1 ? 'Concluir ✓' : 'Próximo →';
+
+  // Dots
+  var dots = '';
+  for (var i = 0; i < TOUR_STEPS.length; i++) {
+    dots += '<div class="tour-dot' + (i===tourStep?' active':'') + '"></div>';
+  }
+  document.getElementById('tour-dots').innerHTML = dots;
+
+  // Position box
+  var box    = document.getElementById('tour-box');
+  var arrow  = document.getElementById('tour-arrow');
+  var boxW   = 290, boxH = 170, margin = 16;
+  var bx, by;
+
+  arrow.className = 'tour-arrow ' + step.arrow;
+
+  if (step.pos === 'right') {
+    bx = rect.right + margin;
+    by = rect.top + rect.height/2 - boxH/2;
+  } else if (step.pos === 'below') {
+    bx = rect.left + rect.width/2 - boxW/2;
+    by = rect.bottom + margin;
+  } else if (step.pos === 'above') {
+    bx = rect.left + rect.width/2 - boxW/2;
+    by = rect.top - boxH - margin;
+  } else {
+    bx = rect.left - boxW - margin;
+    by = rect.top + rect.height/2 - boxH/2;
+  }
+
+  // Keep inside viewport
+  bx = Math.max(12, Math.min(bx, window.innerWidth  - boxW - 12));
+  by = Math.max(12, Math.min(by, window.innerHeight - boxH - 12));
+
+  box.style.left = bx + 'px';
+  box.style.top  = by + 'px';
 }
 
 // ─────────────────────────────────────────────
@@ -1320,6 +1518,55 @@ function duplicateMap() {
 
 // Override saveMap to use new system
 function saveMap() { saveMapAs(); }
+
+// ─────────────────────────────────────────────
+// EVOLVE MAP
+// ─────────────────────────────────────────────
+function evolveMap() {
+  var btn = document.getElementById('ai-evolve-btn');
+  btn.disabled = true;
+  btn.classList.add('loading');
+  setAIStatus('Expandindo o mapa...');
+
+  // Build current map structure as context for Claude
+  var currentMap = {
+    root: document.getElementById('map-title').value,
+    branches: []
+  };
+
+  // Find root node
+  var rootNode = Object.values(nodes).find(function(n){ return n.isRoot; });
+  if (!rootNode) { setAIStatus('Nenhum mapa encontrado.', 'error'); btn.disabled = false; btn.classList.remove('loading'); return; }
+
+  // Build branches from root's children
+  rootNode.children.forEach(function(branchId) {
+    var branch = nodes[branchId];
+    if (!branch) return;
+    var children = branch.children.map(function(cid){ return nodes[cid] ? nodes[cid].label : ''; }).filter(Boolean);
+    currentMap.branches.push({ label: branch.label, children: children });
+  });
+
+  var SYSTEM = 'Você é um assistente especializado em mapas mentais e planejamento. ' +
+    'Receberá um mapa mental existente em JSON e deve expandi-lo, adicionando 2 a 3 filhos novos para CADA branch existente, aprofundando o planejamento com próximos passos concretos e acionáveis. ' +
+    'Mantenha os branches e filhos existentes exatamente como estão. Adicione apenas filhos novos. ' +
+    'Responda APENAS o JSON completo no mesmo formato, sem markdown, sem explicação. ' +
+    'Formato: {"root":"mesmo nome","branches":[{"label":"mesma área","children":["existente1","existente2","NOVO1","NOVO2"]}]}. ' +
+    'Português brasileiro, labels curtos (3-5 palavras).';
+
+  fetch('/api/generate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt: 'Expanda este mapa mental com próximos passos concretos para cada área:\n' + JSON.stringify(currentMap) })
+  })
+  .then(function(r){ return r.json().then(function(d){ if(!r.ok) throw new Error(d.error||'Erro'); return d; }); })
+  .then(function(mapData) {
+    buildMapFromData(mapData);
+    setAIStatus('Mapa expandido! ✓', 'success');
+    setTimeout(function(){ document.getElementById('ai-panel').classList.remove('open'); }, 1200);
+  })
+  .catch(function(err){ setAIStatus('Erro: ' + err.message, 'error'); })
+  .finally(function(){ btn.disabled = false; btn.classList.remove('loading'); });
+}
 
 // ─────────────────────────────────────────────
 // DARK MODE
