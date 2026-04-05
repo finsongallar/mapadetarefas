@@ -16,11 +16,9 @@ export default async function handler(req, res) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'API key não configurada' });
 
-  const SYSTEM = `Você é um assistente especializado em mapas mentais.
-Gere um mapa mental em JSON válido. Responda APENAS o JSON, sem markdown, sem explicação.
-Formato exato:
-{"root":"Nome central (até 4 palavras)","branches":[{"label":"Área","children":["item1","item2"]}]}
-Regras: 4 a 7 branches, 2 a 5 filhos por branch, labels curtos (4-5 palavras), português brasileiro.`;
+  const SYSTEM = `Você é um assistente de planejamento e mapas mentais.
+Responda SEMPRE em JSON válido, sem markdown, sem explicação, sem texto fora do JSON.
+Siga exatamente o formato solicitado no prompt do usuário.`;
 
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -31,7 +29,7 @@ Regras: 4 a 7 branches, 2 a 5 filhos por branch, labels curtos (4-5 palavras), p
         'anthropic-version':   '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
+        model:      'claude-sonnet-4-6',
         max_tokens: 1000,
         system:     SYSTEM,
         messages:   [{ role: 'user', content: prompt.trim() }],

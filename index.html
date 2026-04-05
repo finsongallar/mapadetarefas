@@ -235,6 +235,15 @@ header{position:fixed;top:0;left:0;right:0;height:50px;background:var(--surface)
 .md-saved-item-del:hover{background:#fde8e8;color:#DC2626}
 .md-empty{padding:10px;font-size:12px;color:var(--muted);text-align:center}
 
+/* ── NODE ADD POPUP ── */
+.node-add-popup{position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:5px;z-index:500;box-shadow:0 6px 24px rgba(0,0,0,.14);display:none;flex-direction:column;gap:2px;min-width:170px}
+.node-add-popup.visible{display:flex}
+.nap-btn{display:flex;align-items:center;gap:9px;padding:9px 12px;border-radius:7px;border:none;background:transparent;font-family:'Lato',sans-serif;font-size:13px;color:var(--text);cursor:pointer;text-align:left;width:100%;transition:background .12s}
+.nap-btn:hover{background:var(--bg)}
+.nap-btn svg{width:15px;height:15px;color:var(--muted);flex-shrink:0}
+.nap-btn.ai{color:var(--c-purple);font-weight:700}
+.nap-btn.ai svg{color:var(--c-purple)}
+
 /* ── TOUR ── */
 .tour-backdrop{position:fixed;inset:0;z-index:800;pointer-events:none}
 .tour-highlight{position:fixed;box-shadow:0 0 0 9999px rgba(0,0,0,0.55);border-radius:10px;z-index:801;transition:all .35s cubic-bezier(.4,0,.2,1);pointer-events:none}
@@ -406,6 +415,18 @@ header{position:fixed;top:0;left:0;right:0;height:50px;background:var(--surface)
   </div>
 </div>
 
+<!-- Node Add Popup -->
+<div class="node-add-popup" id="node-add-popup">
+  <button class="nap-btn" id="nap-manual" onclick="napManual()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    Adicionar manualmente
+  </button>
+  <button class="nap-btn ai" id="nap-ai" onclick="napAI()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z"/></svg>
+    Evoluir com IA (3 passos)
+  </button>
+</div>
+
 <!-- Color Picker -->
 <div class="color-popup" id="color-popup">
   <div class="cp-dot c-blue"   onclick="applyColor('c-blue')"></div>
@@ -560,7 +581,7 @@ function makeNode(parentId, label, isRoot) {
   addBtn.className   = 'add-btn right';
   addBtn.textContent = '+';
   addBtn.onmousedown = function(e){ e.stopPropagation(); e.preventDefault(); };
-  addBtn.onclick     = function(e){ e.stopPropagation(); spawnChild(id); };
+  addBtn.onclick     = function(e){ e.stopPropagation(); showNodeAddPopup(id, e); };
 
   el.appendChild(addBtn);
 
@@ -1503,51 +1524,157 @@ function duplicateMap() {
 function saveMap() { saveMapAs(); }
 
 // ─────────────────────────────────────────────
-// EVOLVE MAP
+// NODE ADD POPUP (+ button)
+// ─────────────────────────────────────────────
+var napTargetId = null;
+
+function showNodeAddPopup(nodeId, e) {
+  napTargetId = nodeId;
+  var popup = document.getElementById('node-add-popup');
+  popup.classList.add('visible');
+  // Position near the + button
+  var x = e.clientX + 8;
+  var y = e.clientY - 10;
+  if (x + 180 > window.innerWidth) x = e.clientX - 188;
+  popup.style.left = x + 'px';
+  popup.style.top  = y + 'px';
+  e.stopPropagation();
+}
+
+function hideNodeAddPopup() {
+  document.getElementById('node-add-popup').classList.remove('visible');
+  napTargetId = null;
+}
+
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('#node-add-popup') && !e.target.classList.contains('add-btn')) {
+    hideNodeAddPopup();
+  }
+});
+
+function napManual() {
+  hideNodeAddPopup();
+  if (napTargetId) spawnChild(napTargetId);
+}
+
+function napAI() {
+  var id = napTargetId;
+  hideNodeAddPopup();
+  if (!id) return;
+  evolveNode(id);
+}
+
+// ─────────────────────────────────────────────
+// EVOLVE SINGLE NODE (3 specific children)
+// ─────────────────────────────────────────────
+function evolveNode(nodeId) {
+  var node = nodes[nodeId];
+  if (!node) return;
+
+  showHint('Gerando próximos passos para "' + node.label + '"...');
+
+  // Build context: node + its parent chain
+  var context = [];
+  var cur = node;
+  while (cur) {
+    context.unshift(cur.label);
+    cur = cur.parentId ? nodes[cur.parentId] : null;
+  }
+  var contextStr = context.join(' > ');
+
+  var prompt = 'Dado este caminho num mapa mental: "' + contextStr + '"\n' +
+    'Gere EXATAMENTE 3 próximos passos concretos e acionáveis para o item "' + node.label + '".\n' +
+    'Cada passo deve ser uma ação específica, curta (4-7 palavras), em português brasileiro.\n' +
+    'Responda APENAS JSON: {"steps":["passo 1","passo 2","passo 3"]}';
+
+  fetch('/api/generate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt: prompt })
+  })
+  .then(function(r){ return r.json().then(function(d){ if(!r.ok) throw new Error(d.error||'Erro'); return d; }); })
+  .then(function(data) {
+    var steps = data.steps || [];
+    if (!steps.length) throw new Error('Resposta inválida da IA');
+
+    steps.forEach(function(step) {
+      var child = makeNode(nodeId, step, false);
+      // Position to the right of the parent node
+      var parentW = node.el.offsetWidth || 120;
+      var parentH = node.el.offsetHeight || 44;
+      placeNode(child, node.x + HGAP, node.y);
+    });
+
+    // Re-layout children so they stack nicely
+    doLayout(nodeId);
+    drawConns();
+    saveHistory();
+    showHint('3 passos adicionados ✓');
+  })
+  .catch(function(err){ showHint('Erro: ' + err.message); console.error(err); });
+}
+
+// ─────────────────────────────────────────────
+// EVOLVE FULL MAP (all leaf nodes)
 // ─────────────────────────────────────────────
 function evolveMap() {
   var btn = document.getElementById('ai-evolve-btn');
   btn.disabled = true;
   btn.classList.add('loading');
-  setAIStatus('Expandindo o mapa...');
+  setAIStatus('Expandindo todos os nós...');
 
-  // Build current map structure as context for Claude
-  var currentMap = {
-    root: document.getElementById('map-title').value,
-    branches: []
-  };
-
-  // Find root node
-  var rootNode = Object.values(nodes).find(function(n){ return n.isRoot; });
-  if (!rootNode) { setAIStatus('Nenhum mapa encontrado.', 'error'); btn.disabled = false; btn.classList.remove('loading'); return; }
-
-  // Build branches from root's children
-  rootNode.children.forEach(function(branchId) {
-    var branch = nodes[branchId];
-    if (!branch) return;
-    var children = branch.children.map(function(cid){ return nodes[cid] ? nodes[cid].label : ''; }).filter(Boolean);
-    currentMap.branches.push({ label: branch.label, children: children });
+  // Find all leaf nodes (nodes with no children)
+  var leaves = Object.values(nodes).filter(function(n){
+    return !n.isRoot && n.children.length === 0;
   });
 
-  var SYSTEM = 'Você é um assistente especializado em mapas mentais e planejamento. ' +
-    'Receberá um mapa mental existente em JSON e deve expandi-lo, adicionando 2 a 3 filhos novos para CADA branch existente, aprofundando o planejamento com próximos passos concretos e acionáveis. ' +
-    'Mantenha os branches e filhos existentes exatamente como estão. Adicione apenas filhos novos. ' +
-    'Responda APENAS o JSON completo no mesmo formato, sem markdown, sem explicação. ' +
-    'Formato: {"root":"mesmo nome","branches":[{"label":"mesma área","children":["existente1","existente2","NOVO1","NOVO2"]}]}. ' +
-    'Português brasileiro, labels curtos (3-5 palavras).';
+  if (!leaves.length) {
+    setAIStatus('Nenhum nó para expandir.', 'error');
+    btn.disabled = false; btn.classList.remove('loading');
+    return;
+  }
+
+  // Build list of leaves with context
+  var leafList = leaves.map(function(n) {
+    var context = [];
+    var cur = n;
+    while (cur) { context.unshift(cur.label); cur = cur.parentId ? nodes[cur.parentId] : null; }
+    return { id: n.id, label: n.label, context: context.join(' > ') };
+  });
+
+  var prompt = 'Para cada item abaixo de um mapa mental, gere EXATAMENTE 3 próximos passos concretos e acionáveis (4-7 palavras cada), em português brasileiro.\n' +
+    'Responda APENAS JSON:\n' +
+    '{"nodes":[{"id":"id_do_no","steps":["passo1","passo2","passo3"]}]}\n\n' +
+    'Itens:\n' +
+    leafList.map(function(l){ return '{"id":"' + l.id + '","contexto":"' + l.context + '"}'; }).join('\n');
 
   fetch('/api/generate', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ prompt: 'Expanda este mapa mental com próximos passos concretos para cada área:\n' + JSON.stringify(currentMap) })
+    body: JSON.stringify({ prompt: prompt })
   })
   .then(function(r){ return r.json().then(function(d){ if(!r.ok) throw new Error(d.error||'Erro'); return d; }); })
-  .then(function(mapData) {
-    buildMapFromData(mapData);
-    setAIStatus('Mapa expandido! ✓', 'success');
-    setTimeout(function(){ document.getElementById('ai-panel').classList.remove('open'); }, 1200);
+  .then(function(data) {
+    var nodeResults = data.nodes || [];
+    var added = 0;
+
+    nodeResults.forEach(function(result) {
+      var parent = nodes[result.id];
+      if (!parent || !result.steps) return;
+      result.steps.forEach(function(step) {
+        var child = makeNode(result.id, step, false);
+        placeNode(child, parent.x + HGAP, parent.y);
+        added++;
+      });
+      doLayout(result.id);
+    });
+
+    drawConns();
+    saveHistory();
+    setAIStatus(added + ' passos adicionados ao mapa ✓', 'success');
+    setTimeout(function(){ document.getElementById('ai-panel').classList.remove('open'); }, 1500);
   })
-  .catch(function(err){ setAIStatus('Erro: ' + err.message, 'error'); })
+  .catch(function(err){ setAIStatus('Erro: ' + err.message, 'error'); console.error(err); })
   .finally(function(){ btn.disabled = false; btn.classList.remove('loading'); });
 }
 
