@@ -31,7 +31,7 @@ Regras: 4 a 7 branches, 2 a 5 filhos por branch, labels curtos (4-5 palavras), p
         'anthropic-version':   '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5',
+        model: 'claude-haiku-4-5-20251001',
         max_tokens: 1000,
         system:     SYSTEM,
         messages:   [{ role: 'user', content: prompt.trim() }],
