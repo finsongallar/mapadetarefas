@@ -1174,30 +1174,13 @@ function generateMap() {
 }
 
 function callClaude(prompt) {
-  var SYSTEM = [
-    'Voce e um assistente especializado em mapas mentais.',
-    'Gere um mapa mental em JSON valido. Responda APENAS o JSON, sem markdown, sem explicacao.',
-    'Formato:',
-    '{"root":"Nome central (ate 4 palavras)","branches":[{"label":"Area","children":["item1","item2"]}]}',
-    'Regras: 4 a 7 branches, 2 a 5 filhos por branch, labels curtos (4-5 palavras), portugues brasileiro.'
-  ].join(' ');
-
-  return fetch('https://api.anthropic.com/v1/messages', {
+  return fetch('/api/generate', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1000,
-      system: SYSTEM,
-      messages: [{ role:'user', content: prompt }]
-    })
+    body: JSON.stringify({ prompt: prompt })
   }).then(function(r) {
-    if (!r.ok) throw new Error('Erro API Claude: ' + r.status);
+    if (!r.ok) return r.json().then(function(e){ throw new Error(e.error || 'Erro ' + r.status); });
     return r.json();
-  }).then(function(data) {
-    var text = data.content.map(function(b){ return b.text || ''; }).join('');
-    text = text.replace(/```json|```/g,'').trim();
-    return JSON.parse(text);
   });
 }
 
