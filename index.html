@@ -1625,6 +1625,13 @@ window.addEventListener('load', function() {
 
   setTimeout(drawConns, 200);
   setTimeout(function(){ document.getElementById('hint').style.opacity = '0.4'; }, 6000);
+
+  // Auto-tour: show for first 3 visits
+  var visits = parseInt(localStorage.getItem('mapadetarefas_visits') || '0') + 1;
+  localStorage.setItem('mapadetarefas_visits', visits);
+  if (visits <= 3) {
+    setTimeout(startTour, 1200);
+  }
 });
 
 window.addEventListener('resize', function() { resizeCanvases(); drawConns(); });
