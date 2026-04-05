@@ -86,9 +86,9 @@ header{position:fixed;top:0;left:0;right:0;height:50px;background:var(--surface)
 .tool-btn.active{background:var(--text);color:#fff}
 .tool-sep{height:1px;background:var(--border);margin:3px 0}
 
-/* tooltip */
-.tip{position:absolute;left:calc(100% + 12px);top:50%;transform:translateY(-50%);background:var(--text);color:#fff;font-family:'Lato',sans-serif;font-size:12px;padding:5px 10px;border-radius:7px;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .15s .4s;z-index:400;line-height:1.4}
-.tip::before{content:'';position:absolute;right:100%;top:50%;transform:translateY(-50%);border:5px solid transparent;border-right-color:var(--text)}
+/* tooltip — sempre escuro independente do tema */
+.tip{position:absolute;left:calc(100% + 12px);top:50%;transform:translateY(-50%);background:#1A1A1A;color:#fff;font-family:'Lato',sans-serif;font-size:12px;padding:5px 10px;border-radius:7px;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .15s .4s;z-index:400;line-height:1.4}
+.tip::before{content:'';position:absolute;right:100%;top:50%;transform:translateY(-50%);border:5px solid transparent;border-right-color:#1A1A1A}
 .tool-btn:hover .tip{opacity:1}
 
 /* ── CANVAS ── */
@@ -203,6 +203,38 @@ header{position:fixed;top:0;left:0;right:0;height:50px;background:var(--surface)
 .gpt-key-row input:focus{border-color:var(--c-blue)}
 .gpt-key-note{font-size:11px;color:var(--muted);margin-top:4px}
 
+/* ── MAPS MENU ── */
+.maps-menu-wrap{position:relative}
+.maps-menu-btn{display:flex;align-items:center;gap:7px;padding:6px 12px;border-radius:7px;border:1px solid var(--border);background:var(--surface);font-family:'Syne',sans-serif;font-size:13px;font-weight:600;color:var(--text);cursor:pointer;transition:all .15s;white-space:nowrap}
+.maps-menu-btn:hover{background:var(--bg)}
+.maps-menu-btn svg{width:14px;height:14px;transition:transform .2s}
+.maps-menu-btn.open svg.chevron{transform:rotate(180deg)}
+
+.maps-dropdown{position:absolute;top:calc(100% + 8px);left:0;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:6px;min-width:240px;z-index:400;box-shadow:0 8px 30px rgba(0,0,0,.12);opacity:0;pointer-events:none;transform:translateY(-6px);transition:opacity .18s,transform .18s}
+.maps-dropdown.open{opacity:1;pointer-events:all;transform:translateY(0)}
+
+.md-section{padding:4px 8px 6px;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-top:4px}
+.md-section:first-child{margin-top:0}
+
+.md-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;cursor:pointer;transition:background .12s;font-size:13px;color:var(--text);border:none;background:transparent;width:100%;text-align:left;font-family:'Lato',sans-serif}
+.md-item:hover{background:var(--bg)}
+.md-item svg{width:16px;height:16px;color:var(--muted);flex-shrink:0}
+.md-item.primary{color:var(--c-blue);font-weight:700}
+.md-item.primary svg{color:var(--c-blue)}
+.md-item.danger{color:#DC2626}
+.md-item.danger svg{color:#DC2626}
+
+.md-sep{height:1px;background:var(--border);margin:4px 0}
+
+.md-saved-list{max-height:180px;overflow-y:auto}
+.md-saved-item{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-radius:8px;cursor:pointer;transition:background .12s;font-size:12px;color:var(--text)}
+.md-saved-item:hover{background:var(--bg)}
+.md-saved-item-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.md-saved-item-date{font-size:11px;color:var(--muted);margin-left:8px;flex-shrink:0}
+.md-saved-item-del{width:20px;height:20px;border:none;background:transparent;color:var(--muted);cursor:pointer;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;transition:all .12s}
+.md-saved-item-del:hover{background:#fde8e8;color:#DC2626}
+.md-empty{padding:10px;font-size:12px;color:var(--muted);text-align:center}
+
 /* ── ZOOM ── */
 .zoom-bar{position:fixed;bottom:18px;right:18px;display:flex;align-items:center;gap:4px;background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:5px 8px;z-index:300;box-shadow:0 2px 8px rgba(0,0,0,.06)}
 .zoom-bar button{width:26px;height:26px;border:none;background:transparent;border-radius:5px;font-size:16px;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .12s}
@@ -226,7 +258,51 @@ header{position:fixed;top:0;left:0;right:0;height:50px;background:var(--surface)
 <header>
   <div class="logo">Mapa de <em>Tarefas</em></div>
   <div class="vline"></div>
-  <input class="map-title" id="map-title" value="Finanças Pessoais" />
+
+  <!-- Maps menu -->
+  <div class="maps-menu-wrap" id="maps-menu-wrap">
+    <button class="maps-menu-btn" id="maps-menu-btn" onclick="toggleMapsMenu()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+      </svg>
+      <span id="maps-menu-title">Finanças Pessoais</span>
+      <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="6 9 12 15 18 9"/>
+      </svg>
+    </button>
+
+    <div class="maps-dropdown" id="maps-dropdown">
+      <!-- Ações principais -->
+      <button class="md-item primary" onclick="newMap()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Novo mapa em branco
+      </button>
+      <button class="md-item" onclick="duplicateMap()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        Duplicar mapa atual
+      </button>
+
+      <div class="md-sep"></div>
+
+      <!-- Salvar -->
+      <button class="md-item" onclick="saveMapAs()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        Salvar mapa atual
+      </button>
+
+      <div class="md-sep"></div>
+
+      <!-- Mapas salvos -->
+      <div class="md-section">Mapas salvos</div>
+      <div class="md-saved-list" id="saved-maps-list">
+        <div class="md-empty">Nenhum mapa salvo ainda</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Título editável do mapa atual -->
+  <input class="map-title" id="map-title" value="Finanças Pessoais" oninput="syncMenuTitle()" />
+
   <div class="hdr-r">
     <div class="style-toggle">
       <button class="active" id="st-filled"   onclick="setGlobalStyle('filled')">Preenchido</button>
@@ -263,9 +339,9 @@ header{position:fixed;top:0;left:0;right:0;height:50px;background:var(--surface)
   </button>
   <div class="tool-sep"></div>
   <button class="tool-btn" onclick="undoMap()">
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M2 9.5 C2 5 13.5 5 13.5 9.5"/>
-      <polyline points="5,6.5 2,9.5 5,12.5"/>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 7h10a5 5 0 0 1 0 10H8"/>
+      <polyline points="7 3 3 7 7 11"/>
     </svg>
     <span class="tip">Desfazer<br><small style="opacity:.7">Ctrl + Z</small></span>
   </button>
@@ -329,6 +405,18 @@ header{position:fixed;top:0;left:0;right:0;height:50px;background:var(--surface)
     <button class="ai-close" onclick="toggleAIPanel()">×</button>
   </div>
   <div class="ai-panel-body">
+    <div>
+      <div class="ai-label">Modelo</div>
+      <div class="ai-model-row">
+        <button class="ai-model-btn active" id="model-claude" onclick="selectModel('claude')">◆ Claude</button>
+        <button class="ai-model-btn"        id="model-gpt"   onclick="selectModel('gpt')">⬡ ChatGPT</button>
+      </div>
+    </div>
+    <div class="gpt-key-row" id="gpt-key-row">
+      <div class="ai-label">Chave API OpenAI</div>
+      <input id="gpt-api-key" type="password" placeholder="sk-..." />
+      <div class="gpt-key-note">Usada só nessa sessão, não é salva.</div>
+    </div>
     <div>
       <div class="ai-label">Descreva seu plano ou ideia</div>
       <textarea class="ai-textarea" id="ai-prompt" placeholder="Ex: Quero lançar um app de delivery em Taubaté. Preciso organizar produto, marketing, tecnologia e finanças nos próximos 3 meses..."></textarea>
@@ -1054,38 +1142,201 @@ function generateMap() {
   if (!prompt) { setAIStatus('Descreva sua ideia antes de gerar.', 'error'); return; }
 
   setGenerating(true);
-  setAIStatus('Gerando seu mapa...');
+  setAIStatus('Pensando...');
   document.getElementById('ai-result-box').classList.remove('visible');
 
-  // Chama o backend seguro — chave nunca exposta ao browser
-  fetch('/api/generate', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ prompt: prompt })
-  })
-  .then(function(r) {
-    return r.json().then(function(data) {
-      if (!r.ok) throw new Error(data.error || 'Erro ' + r.status);
-      return data;
-    });
-  })
-  .then(function(mapData) {
+  var promise;
+  if (aiModel === 'claude') {
+    setAIStatus('Consultando Claude...');
+    promise = callClaude(prompt);
+  } else {
+    var key = document.getElementById('gpt-api-key').value.trim();
+    if (!key) { setAIStatus('Insira sua chave da OpenAI.', 'error'); setGenerating(false); return; }
+    setAIStatus('Consultando ChatGPT...');
+    promise = callGPT(prompt, key);
+  }
+
+  promise.then(function(mapData) {
     var rb = document.getElementById('ai-result-box');
-    rb.textContent = '✓ ' + (mapData.branches ? mapData.branches.length : 0) + ' áreas geradas';
+    rb.textContent = String.fromCharCode(10003) + ' ' + (mapData.branches ? mapData.branches.length : 0) + ' areas geradas';
     rb.classList.add('visible');
+
     buildMapFromData(mapData);
-    setAIStatus('Mapa gerado com sucesso! ✓', 'success');
+    setAIStatus('Mapa gerado com sucesso! ' + String.fromCharCode(10003), 'success');
     hideExamplePopup();
     setTimeout(function(){ document.getElementById('ai-panel').classList.remove('open'); }, 1500);
-  })
-  .catch(function(err) {
+  }).catch(function(err) {
     console.error(err);
     setAIStatus('Erro: ' + err.message, 'error');
-  })
-  .finally(function() {
+  }).finally(function() {
     setGenerating(false);
   });
 }
+
+function callClaude(prompt) {
+  var SYSTEM = [
+    'Voce e um assistente especializado em mapas mentais.',
+    'Gere um mapa mental em JSON valido. Responda APENAS o JSON, sem markdown, sem explicacao.',
+    'Formato:',
+    '{"root":"Nome central (ate 4 palavras)","branches":[{"label":"Area","children":["item1","item2"]}]}',
+    'Regras: 4 a 7 branches, 2 a 5 filhos por branch, labels curtos (4-5 palavras), portugues brasileiro.'
+  ].join(' ');
+
+  return fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1000,
+      system: SYSTEM,
+      messages: [{ role:'user', content: prompt }]
+    })
+  }).then(function(r) {
+    if (!r.ok) throw new Error('Erro API Claude: ' + r.status);
+    return r.json();
+  }).then(function(data) {
+    var text = data.content.map(function(b){ return b.text || ''; }).join('');
+    text = text.replace(/```json|```/g,'').trim();
+    return JSON.parse(text);
+  });
+}
+
+function callGPT(prompt, apiKey) {
+  var SYSTEM = 'Gere um mapa mental em JSON. Apenas JSON, sem markdown. Formato: {"root":"Nome","branches":[{"label":"Area","children":["item1","item2"]}]}. 4-7 branches, 2-5 filhos, labels curtos, portugues brasileiro.';
+  return fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type':'application/json', 'Authorization':'Bearer ' + apiKey },
+    body: JSON.stringify({
+      model: 'gpt-4o-mini',
+      messages: [{ role:'system', content:SYSTEM },{ role:'user', content:prompt }],
+      max_tokens: 1000,
+      response_format: { type:'json_object' }
+    })
+  }).then(function(r) {
+    return r.json().then(function(data) {
+      if (!r.ok) throw new Error(data.error ? data.error.message : 'Erro OpenAI ' + r.status);
+      return JSON.parse(data.choices[0].message.content);
+    });
+  });
+}
+
+// ─────────────────────────────────────────────
+// MAPS MENU
+// ─────────────────────────────────────────────
+var mapsMenuOpen = false;
+
+function toggleMapsMenu() {
+  mapsMenuOpen = !mapsMenuOpen;
+  document.getElementById('maps-dropdown').classList.toggle('open', mapsMenuOpen);
+  document.getElementById('maps-menu-btn').classList.toggle('open', mapsMenuOpen);
+  if (mapsMenuOpen) renderSavedList();
+}
+
+function closeMapsMenu() {
+  mapsMenuOpen = false;
+  document.getElementById('maps-dropdown').classList.remove('open');
+  document.getElementById('maps-menu-btn').classList.remove('open');
+}
+
+// Close when clicking outside
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('#maps-menu-wrap')) closeMapsMenu();
+});
+
+function syncMenuTitle() {
+  var t = document.getElementById('map-title').value || 'Sem título';
+  document.getElementById('maps-menu-title').textContent = t;
+}
+
+// ── SAVED MAPS (localStorage list) ──
+var MAPS_KEY = 'mapadetarefas_maps';
+
+function getMaps() {
+  try { return JSON.parse(localStorage.getItem(MAPS_KEY) || '[]'); } catch(e) { return []; }
+}
+function setMaps(arr) { localStorage.setItem(MAPS_KEY, JSON.stringify(arr)); }
+
+function saveMapAs() {
+  closeMapsMenu();
+  var title = document.getElementById('map-title').value.trim() || 'Sem título';
+  var maps  = getMaps();
+  var existing = maps.findIndex(function(m){ return m.title === title; });
+  var snap = {
+    title: title,
+    savedAt: new Date().toISOString(),
+    nodes: Object.values(nodes).map(function(n){
+      return { id:n.id, label:n.label, x:n.x, y:n.y, color:n.color, parentId:n.parentId, isRoot:n.isRoot, children:n.children.slice() };
+    })
+  };
+  if (existing >= 0) maps[existing] = snap;
+  else maps.unshift(snap);
+  setMaps(maps);
+  showHint('Mapa "' + title + '" salvo ✓');
+}
+
+function loadMapFromSaved(title) {
+  closeMapsMenu();
+  var maps = getMaps();
+  var m = maps.find(function(m){ return m.title === title; });
+  if (!m) return;
+  document.getElementById('map-title').value = m.title;
+  syncMenuTitle();
+  restoreSnap(m.nodes);
+  saveHistory();
+  showHint('Mapa "' + m.title + '" carregado ✓');
+}
+
+function deleteSavedMap(title, e) {
+  e.stopPropagation();
+  var maps = getMaps().filter(function(m){ return m.title !== title; });
+  setMaps(maps);
+  renderSavedList();
+}
+
+function renderSavedList() {
+  var maps = getMaps();
+  var list = document.getElementById('saved-maps-list');
+  if (!maps.length) {
+    list.innerHTML = '<div class="md-empty">Nenhum mapa salvo ainda</div>';
+    return;
+  }
+  list.innerHTML = maps.map(function(m) {
+    var d = new Date(m.savedAt);
+    var dateStr = d.toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit' });
+    return '<div class="md-saved-item" onclick="loadMapFromSaved(\'' + m.title.replace(/'/g,"\\'") + '\')">' +
+      '<span class="md-saved-item-name">' + m.title + '</span>' +
+      '<span class="md-saved-item-date">' + dateStr + '</span>' +
+      '<button class="md-saved-item-del" onclick="deleteSavedMap(\'' + m.title.replace(/'/g,"\\'") + '\', event)" title="Apagar">×</button>' +
+    '</div>';
+  }).join('');
+}
+
+function newMap() {
+  closeMapsMenu();
+  if (!confirm('Criar novo mapa? O mapa atual não salvo será perdido.')) return;
+  Object.values(nodes).forEach(function(n){ n.wrap.remove(); });
+  nodes = {}; idCounter = 1;
+  mapHistory = []; histIdx = -1;
+  document.getElementById('map-title').value = 'Novo Mapa';
+  syncMenuTitle();
+  resizeCanvases();
+  var root = makeNode(null, 'Central', true);
+  placeNode(root, getCX(), getCY());
+  drawConns();
+  saveHistory();
+  setTimeout(function(){ startEdit(root.id); }, 80);
+}
+
+function duplicateMap() {
+  closeMapsMenu();
+  var title = document.getElementById('map-title').value + ' (cópia)';
+  document.getElementById('map-title').value = title;
+  syncMenuTitle();
+  saveMapAs();
+}
+
+// Override saveMap to use new system
+function saveMap() { saveMapAs(); }
 
 // ─────────────────────────────────────────────
 // DARK MODE
