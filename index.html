@@ -1243,10 +1243,14 @@ function generateMap() {
 }
 
 function callClaude(prompt) {
+  var fullPrompt = 'Gere um mapa mental em JSON válido sobre o tema a seguir. Responda APENAS o JSON, sem markdown, sem explicação.\n' +
+    'Formato exato: {"root":"Nome central (até 4 palavras)","branches":[{"label":"Área","children":["item1","item2"]}]}\n' +
+    'Regras: 4 a 7 branches, 2 a 5 filhos por branch, labels curtos (4-5 palavras), português brasileiro.\n\n' +
+    'Tema: ' + prompt;
   return fetch('/api/generate', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ prompt: prompt })
+    body: JSON.stringify({ prompt: fullPrompt })
   }).then(function(r) {
     if (!r.ok) return r.json().then(function(e){ throw new Error(e.error || 'Erro ' + r.status); });
     return r.json();
