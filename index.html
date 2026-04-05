@@ -1,0 +1,1152 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mapa de Tarefas</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@500;600;700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+
+:root{
+  --bg:#F4F2EE; --surface:#FFF; --border:#E0DBD4;
+  --text:#1A1A1A; --muted:#8A8580;
+  --c-blue:#2563EB;  --c-blue-bg:#EFF6FF;
+  --c-green:#16A34A; --c-green-bg:#F0FDF4;
+  --c-orange:#EA580C;--c-orange-bg:#FFF7ED;
+  --c-purple:#7C3AED;--c-purple-bg:#F5F3FF;
+  --c-pink:#DB2777;  --c-pink-bg:#FDF2F8;
+}
+
+/* ── DARK MODE ── */
+body.dark{
+  --bg:#14151A; --surface:#1E2028; --border:#2E3040;
+  --text:#E8EAF0; --muted:#6B7080;
+  --c-blue-bg:#1E2A4A;
+  --c-green-bg:#162A1E;
+  --c-orange-bg:#2A1A0E;
+  --c-purple-bg:#221A3A;
+  --c-pink-bg:#2A1220;
+}
+
+/* dark: keep node text white on filled, adjust outlined text */
+body.dark .node.outlined.c-blue  {color:#7EB3FF}
+body.dark .node.outlined.c-green {color:#6EDA8E}
+body.dark .node.outlined.c-orange{color:#FFA96E}
+body.dark .node.outlined.c-purple{color:#BEA6FF}
+body.dark .node.outlined.c-pink  {color:#FF8EC4}
+body.dark .node{box-shadow:0 2px 8px rgba(0,0,0,.4)}
+
+/* dark: toolbar active btn — white bg, dark icon so it's readable */
+body.dark .tool-btn.active{background:#FFFFFF;color:#1A1A1A}
+/* dark: map title legível */
+body.dark .map-title{color:var(--text)}
+/* dark: btn-primary inverts to keep readable */
+body.dark .btn-primary{background:#E8EAF0;color:#1A1A1A;border-color:#E8EAF0}
+body.dark .btn-primary:hover{background:#fff;color:#1A1A1A}
+/* dark: style toggle */
+body.dark .style-toggle button.active{background:#FFFFFF;color:#1A1A1A}
+body.dark .style-toggle{border-color:var(--border)}
+
+/* dark mode toggle button */
+.dark-toggle{width:34px;height:34px;border-radius:8px;border:1px solid var(--border);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--muted);flex-shrink:0}
+.dark-toggle:hover{background:var(--bg);color:var(--text)}
+.dark-toggle svg{width:16px;height:16px}
+
+body{background:var(--bg);font-family:'Lato',sans-serif;color:var(--text);height:100vh;overflow:hidden;user-select:none}
+
+/* ── HEADER ── */
+header{position:fixed;top:0;left:0;right:0;height:50px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 18px;gap:12px;z-index:300}
+.logo{font-family:'Syne',sans-serif;font-weight:700;font-size:16px;white-space:nowrap}
+.logo em{color:var(--c-blue);font-style:normal}
+.map-title{font-family:'Syne',sans-serif;font-weight:600;font-size:14px;color:var(--text);background:transparent;border:none;outline:none;padding:4px 8px;border-radius:6px;min-width:160px;transition:background .15s}
+.map-title:hover,.map-title:focus{background:var(--bg)}
+.vline{width:1px;height:20px;background:var(--border);flex-shrink:0}
+.hdr-r{margin-left:auto;display:flex;gap:8px;align-items:center}
+
+.btn{padding:6px 13px;border-radius:7px;border:1px solid var(--border);font-family:'Lato',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all .15s;background:var(--surface);color:var(--muted);white-space:nowrap}
+.btn:hover{background:var(--bg);color:var(--text)}
+.btn-primary{background:var(--text);color:#fff;border-color:var(--text)}
+.btn-primary:hover{background:#333}
+.btn-ia{border-color:var(--c-blue);color:var(--c-blue)}
+.btn-ia:hover{background:var(--c-blue-bg);color:var(--c-blue)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+
+.style-toggle{display:flex;border:1px solid var(--border);border-radius:7px;overflow:hidden;flex-shrink:0}
+.style-toggle button{border:none;background:transparent;padding:5px 11px;font-family:'Lato',sans-serif;font-size:12px;font-weight:700;cursor:pointer;color:var(--muted);transition:all .15s}
+.style-toggle button.active{background:var(--text);color:#fff}
+
+/* ── TOOLBAR ── */
+.toolbar{position:fixed;left:14px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:2px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:6px;z-index:300;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.tool-btn{position:relative;width:36px;height:36px;border-radius:7px;border:none;background:transparent;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .12s}
+.tool-btn svg{width:18px;height:18px;flex-shrink:0}
+.tool-btn:hover{background:var(--bg);color:var(--text)}
+.tool-btn.active{background:var(--text);color:#fff}
+.tool-sep{height:1px;background:var(--border);margin:3px 0}
+
+/* tooltip */
+.tip{position:absolute;left:calc(100% + 12px);top:50%;transform:translateY(-50%);background:var(--text);color:#fff;font-family:'Lato',sans-serif;font-size:12px;padding:5px 10px;border-radius:7px;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .15s .4s;z-index:400;line-height:1.4}
+.tip::before{content:'';position:absolute;right:100%;top:50%;transform:translateY(-50%);border:5px solid transparent;border-right-color:var(--text)}
+.tool-btn:hover .tip{opacity:1}
+
+/* ── CANVAS ── */
+#canvas-wrap{position:fixed;top:50px;left:0;right:0;bottom:0;overflow:hidden;background:var(--bg)}
+#dot-bg{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}
+#map-root{position:absolute;top:0;left:0;width:100%;height:100%;transform-origin:center center}
+#conn-canvas{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}
+#nodes-layer{position:absolute;top:0;left:0;width:100%;height:100%}
+
+/* ── NODES ── */
+.node-wrap{position:absolute}
+.node{position:relative;border-radius:10px;padding:9px 18px;font-family:'Lato',sans-serif;font-size:13px;font-weight:400;cursor:grab;min-width:90px;max-width:200px;text-align:center;line-height:1.4;word-break:break-word;white-space:pre-wrap;border:2.5px solid transparent;transition:box-shadow .15s,transform .1s;box-shadow:0 1px 5px rgba(0,0,0,.09)}
+.node:active{cursor:grabbing}
+.node.root{font-family:'Syne',sans-serif;font-weight:700;font-size:15px;padding:12px 24px;border-radius:12px}
+.node:hover{transform:translateY(-1px);box-shadow:0 5px 14px rgba(0,0,0,.13)}
+.node.selected{outline:2.5px solid var(--text);outline-offset:3px}
+
+.node.filled.c-blue  {background:var(--c-blue);  border-color:var(--c-blue);  color:#fff}
+.node.filled.c-green {background:var(--c-green); border-color:var(--c-green); color:#fff}
+.node.filled.c-orange{background:var(--c-orange);border-color:var(--c-orange);color:#fff}
+.node.filled.c-purple{background:var(--c-purple);border-color:var(--c-purple);color:#fff}
+.node.filled.c-pink  {background:var(--c-pink);  border-color:var(--c-pink);  color:#fff}
+
+.node.outlined.c-blue  {background:var(--c-blue-bg);  border-color:var(--c-blue);  color:var(--c-blue)}
+.node.outlined.c-green {background:var(--c-green-bg); border-color:var(--c-green); color:var(--c-green)}
+.node.outlined.c-orange{background:var(--c-orange-bg);border-color:var(--c-orange);color:var(--c-orange)}
+.node.outlined.c-purple{background:var(--c-purple-bg);border-color:var(--c-purple);color:var(--c-purple)}
+.node.outlined.c-pink  {background:var(--c-pink-bg);  border-color:var(--c-pink);  color:var(--c-pink)}
+
+.add-btn{position:absolute;width:20px;height:20px;border-radius:50%;background:var(--surface);border:1.5px solid var(--border);color:var(--muted);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;z-index:10;box-shadow:0 1px 4px rgba(0,0,0,.12);transition:all .12s}
+.node-wrap:hover .add-btn{opacity:1}
+.add-btn.right{right:-11px;top:50%;transform:translateY(-50%)}
+.add-btn.right:hover{background:var(--text);color:#fff;border-color:var(--text);transform:translateY(-50%) scale(1.15)}
+.del-btn{position:absolute;top:-9px;right:-9px;width:18px;height:18px;border-radius:50%;background:var(--surface);border:1.5px solid var(--border);color:var(--muted);font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;transition:all .12s;z-index:10}
+.node-wrap:hover .del-btn{opacity:1}
+.del-btn:hover{background:#DC2626;color:#fff;border-color:#DC2626}
+.node[contenteditable="true"]{outline:2.5px solid var(--c-blue)!important;outline-offset:2px;cursor:text}
+
+/* ── COLOR POPUP ── */
+.color-popup{position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px;display:flex;gap:7px;z-index:400;box-shadow:0 4px 20px rgba(0,0,0,.14);opacity:0;pointer-events:none;transition:opacity .15s}
+.color-popup.visible{opacity:1;pointer-events:all}
+.cp-dot{width:24px;height:24px;border-radius:50%;cursor:pointer;border:2.5px solid transparent;transition:transform .12s}
+.cp-dot:hover{transform:scale(1.2)}
+.cp-dot.c-blue  {background:var(--c-blue)}
+.cp-dot.c-green {background:var(--c-green)}
+.cp-dot.c-orange{background:var(--c-orange)}
+.cp-dot.c-purple{background:var(--c-purple)}
+.cp-dot.c-pink  {background:var(--c-pink)}
+
+/* ── EXAMPLE POPUP ── */
+.example-popup{position:absolute;bottom:24px;left:80px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;z-index:150;box-shadow:0 4px 20px rgba(0,0,0,.10);max-width:300px;transition:opacity .3s,transform .3s;display:flex;flex-direction:column;gap:8px}
+.example-popup.hidden{opacity:0;pointer-events:none;transform:translateY(6px)}
+.ep-label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em}
+.ep-link{font-family:'Syne',sans-serif;font-weight:600;font-size:13px;color:var(--c-blue);cursor:pointer;transition:opacity .12s;line-height:1.4}
+.ep-link:hover{opacity:.75}
+.ep-close{position:absolute;top:8px;right:10px;border:none;background:transparent;color:var(--muted);font-size:16px;cursor:pointer;line-height:1;padding:2px 4px}
+.ep-close:hover{color:var(--text)}
+
+/* ── EXPORT MODAL ── */
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:500;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
+.modal-backdrop.visible{opacity:1;pointer-events:all}
+.modal{background:var(--surface);border-radius:14px;padding:28px;width:340px;box-shadow:0 20px 60px rgba(0,0,0,.2);display:flex;flex-direction:column;gap:14px}
+.modal h2{font-family:'Syne',sans-serif;font-size:16px;font-weight:700}
+.export-option{display:flex;align-items:center;gap:14px;padding:14px 16px;border:1.5px solid var(--border);border-radius:10px;cursor:pointer;transition:all .15s;background:transparent;text-align:left;width:100%}
+.export-option:hover{border-color:var(--c-blue);background:var(--c-blue-bg)}
+.export-icon{font-size:26px;flex-shrink:0}
+.export-label{font-family:'Syne',sans-serif;font-weight:600;font-size:14px}
+.export-sub{font-size:12px;color:var(--muted);margin-top:2px}
+.modal-close{align-self:flex-end;background:transparent;border:none;font-size:13px;color:var(--muted);cursor:pointer;padding:4px 8px;border-radius:6px;transition:all .12s}
+.modal-close:hover{background:var(--bg);color:var(--text)}
+
+/* loading */
+.loading-overlay{position:fixed;inset:0;background:rgba(255,255,255,.85);z-index:600;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;font-family:'Syne',sans-serif;font-size:15px;font-weight:600;opacity:0;pointer-events:none;transition:opacity .2s}
+.loading-overlay.visible{opacity:1;pointer-events:all}
+.spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--c-blue);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── AI PANEL ── */
+.ai-panel{position:fixed;top:50px;right:-420px;width:400px;bottom:0;background:var(--surface);border-left:1px solid var(--border);z-index:250;display:flex;flex-direction:column;transition:right .3s cubic-bezier(.16,1,.3,1);box-shadow:-4px 0 20px rgba(0,0,0,.06)}
+.ai-panel.open{right:0}
+.ai-panel-header{padding:18px 20px 14px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.ai-panel-title{font-family:'Syne',sans-serif;font-weight:700;font-size:15px}
+.ai-panel-sub{font-size:12px;color:var(--muted);margin-top:3px;line-height:1.5}
+.ai-close{border:none;background:transparent;color:var(--muted);font-size:20px;cursor:pointer;line-height:1;padding:0 4px;flex-shrink:0;transition:color .12s}
+.ai-close:hover{color:var(--text)}
+.ai-panel-body{flex:1;padding:18px 20px;display:flex;flex-direction:column;gap:14px;overflow-y:auto}
+.ai-label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px}
+.ai-textarea{width:100%;min-height:140px;border:1.5px solid var(--border);border-radius:10px;padding:12px 14px;font-family:'Lato',sans-serif;font-size:13px;line-height:1.6;color:var(--text);background:var(--bg);resize:vertical;outline:none;transition:border-color .15s;user-select:text}
+.ai-textarea:focus{border-color:var(--c-blue)}
+.ai-textarea::placeholder{color:var(--muted)}
+.ai-model-row{display:flex;gap:8px}
+.ai-model-btn{flex:1;padding:8px 10px;border-radius:8px;border:1.5px solid var(--border);background:transparent;font-family:'Lato',sans-serif;font-size:12px;font-weight:700;cursor:pointer;color:var(--muted);transition:all .12s;text-align:center}
+.ai-model-btn.active{border-color:var(--c-blue);background:var(--c-blue-bg);color:var(--c-blue)}
+.ai-model-btn:hover:not(.active){background:var(--bg);color:var(--text)}
+.ai-generate-btn{width:100%;padding:12px;border-radius:10px;border:none;background:var(--c-blue);color:#fff;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:8px}
+.ai-generate-btn:hover{background:#1d4ed8;transform:translateY(-1px)}
+.ai-generate-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.ai-status{font-size:12px;color:var(--muted);text-align:center;min-height:18px;line-height:1.5}
+.ai-status.error{color:#DC2626}
+.ai-status.success{color:var(--c-green)}
+.ai-result-box{border:1.5px solid var(--border);border-radius:10px;padding:12px 14px;background:var(--bg);font-size:12px;color:var(--muted);line-height:1.6;display:none;max-height:120px;overflow-y:auto}
+.ai-result-box.visible{display:block}
+.ai-divider{height:1px;background:var(--border);margin:4px 0}
+.ai-examples{display:flex;flex-direction:column;gap:6px}
+.ai-example{padding:8px 12px;border-radius:8px;border:1px solid var(--border);font-size:12px;color:var(--muted);cursor:pointer;transition:all .12s;line-height:1.4;background:transparent;text-align:left;width:100%;font-family:'Lato',sans-serif}
+.ai-example:hover{background:var(--c-blue-bg);border-color:var(--c-blue);color:var(--c-blue)}
+.btn-spinner{width:16px;height:16px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;display:none}
+.ai-generate-btn.loading .btn-spinner{display:block}
+.ai-generate-btn.loading .btn-label{display:none}
+.gpt-key-row{display:none}
+.gpt-key-row input{width:100%;border:1.5px solid var(--border);border-radius:8px;padding:8px 12px;font-family:'Lato',sans-serif;font-size:13px;color:var(--text);background:var(--bg);outline:none;transition:border-color .15s}
+.gpt-key-row input:focus{border-color:var(--c-blue)}
+.gpt-key-note{font-size:11px;color:var(--muted);margin-top:4px}
+
+/* ── ZOOM ── */
+.zoom-bar{position:fixed;bottom:18px;right:18px;display:flex;align-items:center;gap:4px;background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:5px 8px;z-index:300;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.zoom-bar button{width:26px;height:26px;border:none;background:transparent;border-radius:5px;font-size:16px;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .12s}
+.zoom-bar button:hover{background:var(--bg);color:var(--text)}
+.zoom-pct{font-family:'Syne',sans-serif;font-weight:600;font-size:12px;color:var(--muted);min-width:38px;text-align:center}
+
+/* ── HINT ── */
+.hint{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);font-size:12px;color:var(--muted);background:var(--surface);border:1px solid var(--border);padding:5px 14px;border-radius:20px;pointer-events:none;z-index:200;transition:opacity .4s;white-space:nowrap}
+
+/* ── PRINT ── */
+@media print{
+  header,.toolbar,.zoom-bar,.hint,.add-btn,.del-btn,
+  .color-popup,.modal-backdrop,.loading-overlay,.ai-panel,.example-popup{display:none!important}
+  #canvas-wrap{top:0;position:static;width:100%;height:auto}
+  body{overflow:visible}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Mapa de <em>Tarefas</em></div>
+  <div class="vline"></div>
+  <input class="map-title" id="map-title" value="Finanças Pessoais" />
+  <div class="hdr-r">
+    <div class="style-toggle">
+      <button class="active" id="st-filled"   onclick="setGlobalStyle('filled')">Preenchido</button>
+      <button               id="st-outlined" onclick="setGlobalStyle('outlined')">Só borda</button>
+    </div>
+    <div class="vline"></div>
+    <button class="btn" onclick="openExportModal()">⬇ Baixar</button>
+    <button class="btn btn-ia" onclick="toggleAIPanel()">✦ Gerar com IA</button>
+    <!-- dark mode toggle -->
+    <button class="dark-toggle" id="dark-toggle" onclick="toggleDark()" title="Modo noite">
+      <svg id="icon-moon" viewBox="0 0 16 16" fill="currentColor">
+        <path d="M13.5 10.5A6 6 0 0 1 5.5 2.5a.5.5 0 0 0-.65-.65A7 7 0 1 0 14.15 11.15a.5.5 0 0 0-.65-.65z"/>
+      </svg>
+      <svg id="icon-sun" viewBox="0 0 16 16" fill="currentColor" style="display:none">
+        <circle cx="8" cy="8" r="3"/>
+        <path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.22 3.22l1.42 1.42M11.36 11.36l1.42 1.42M3.22 12.78l1.42-1.42M11.36 4.64l1.42-1.42" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+      </svg>
+    </button>
+    <button class="btn btn-primary" onclick="saveMap()">Salvar</button>
+  </div>
+</header>
+
+<div class="toolbar">
+  <button class="tool-btn" id="tb-select" onclick="setTool('select')">
+    <svg viewBox="0 0 16 16" fill="currentColor"><path d="M3 1v12.8l3.2-3.2 2.7 5.8 2-.9-2.7-5.5H13L3 1z"/></svg>
+    <span class="tip">Selecionar nó<br><small style="opacity:.7">Atalho: V</small></span>
+  </button>
+  <button class="tool-btn active" id="tb-pan" onclick="setTool('pan')">
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M8 9V4a1.5 1.5 0 0 1 3 0v5"/><path d="M11 8.5V3.5a1.5 1.5 0 0 1 3 0V9"/>
+      <path d="M14 8V6a1.5 1.5 0 0 1 3 0v4"/><path d="M8 9.5V8a1.5 1.5 0 0 0-3 0v4a5 5 0 0 0 5 5h1a5 5 0 0 0 5-5v-1"/>
+    </svg>
+    <span class="tip">Mover a tela<br><small style="opacity:.7">Atalho: H</small></span>
+  </button>
+  <div class="tool-sep"></div>
+  <button class="tool-btn" onclick="undoMap()">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M2 9.5 C2 5 13.5 5 13.5 9.5"/>
+      <polyline points="5,6.5 2,9.5 5,12.5"/>
+    </svg>
+    <span class="tip">Desfazer<br><small style="opacity:.7">Ctrl + Z</small></span>
+  </button>
+</div>
+
+<div id="canvas-wrap">
+  <canvas id="dot-bg"></canvas>
+  <div id="map-root">
+    <canvas id="conn-canvas"></canvas>
+    <div id="nodes-layer"></div>
+  </div>
+
+  <!-- Example switch popup — only shown on initial example -->
+  <div class="example-popup" id="example-popup">
+    <button class="ep-close" onclick="hideExamplePopup()">×</button>
+    <div class="ep-label">💡 Veja também outro exemplo</div>
+    <div class="ep-link" onclick="loadClothingExample()">
+      Mapa Mental para criar uma marca de Roupas →
+    </div>
+  </div>
+</div>
+
+<!-- Color Picker -->
+<div class="color-popup" id="color-popup">
+  <div class="cp-dot c-blue"   onclick="applyColor('c-blue')"></div>
+  <div class="cp-dot c-green"  onclick="applyColor('c-green')"></div>
+  <div class="cp-dot c-orange" onclick="applyColor('c-orange')"></div>
+  <div class="cp-dot c-purple" onclick="applyColor('c-purple')"></div>
+  <div class="cp-dot c-pink"   onclick="applyColor('c-pink')"></div>
+</div>
+
+<!-- Export Modal -->
+<div class="modal-backdrop" id="export-modal">
+  <div class="modal">
+    <h2>Baixar mapa</h2>
+    <button class="export-option" onclick="exportPNG()">
+      <span class="export-icon">🖼️</span>
+      <div><div class="export-label">Baixar como Imagem</div><div class="export-sub">Arquivo .PNG de alta resolução</div></div>
+    </button>
+    <button class="export-option" onclick="exportPDF()">
+      <span class="export-icon">📄</span>
+      <div><div class="export-label">Baixar como PDF</div><div class="export-sub">Pronto para imprimir</div></div>
+    </button>
+    <button class="modal-close" onclick="closeExportModal()">Fechar</button>
+  </div>
+</div>
+
+<!-- Loading -->
+<div class="loading-overlay" id="loading">
+  <div class="spinner"></div>
+  <span id="loading-msg">Gerando arquivo...</span>
+</div>
+
+<!-- AI Panel -->
+<div class="ai-panel" id="ai-panel">
+  <div class="ai-panel-header">
+    <div>
+      <div class="ai-panel-title">✦ Gerar Mapa com IA</div>
+      <div class="ai-panel-sub">Descreva sua ideia e a IA monta o mapa</div>
+    </div>
+    <button class="ai-close" onclick="toggleAIPanel()">×</button>
+  </div>
+  <div class="ai-panel-body">
+    <div>
+      <div class="ai-label">Descreva seu plano ou ideia</div>
+      <textarea class="ai-textarea" id="ai-prompt" placeholder="Ex: Quero lançar um app de delivery em Taubaté. Preciso organizar produto, marketing, tecnologia e finanças nos próximos 3 meses..."></textarea>
+    </div>
+    <div>
+      <div class="ai-label">Exemplos rápidos</div>
+      <div class="ai-examples">
+        <button class="ai-example" onclick="fillExample(0)">Lançamento de produto digital</button>
+        <button class="ai-example" onclick="fillExample(1)">Estratégia de redes sociais</button>
+        <button class="ai-example" onclick="fillExample(2)">Planejamento financeiro pessoal</button>
+        <button class="ai-example" onclick="fillExample(3)">Campanha de marketing</button>
+      </div>
+    </div>
+    <div class="ai-divider"></div>
+    <button class="ai-generate-btn" id="ai-gen-btn" onclick="generateMap()">
+      <div class="btn-spinner"></div>
+      <span class="btn-label">✦ Gerar Mapa Agora</span>
+    </button>
+    <div class="ai-status" id="ai-status"></div>
+    <div class="ai-result-box" id="ai-result-box"></div>
+  </div>
+</div>
+
+<div class="zoom-bar">
+  <button onclick="zoomMap(-0.15)">−</button>
+  <span class="zoom-pct" id="zoom-pct">100%</span>
+  <button onclick="zoomMap(0.15)">+</button>
+  <button onclick="resetZoom()" title="Centralizar">⊙</button>
+</div>
+
+<div class="hint" id="hint">Duplo clique para editar · Clique direito para cor · Tab = filho · Del = deletar</div>
+
+<script>
+// ─────────────────────────────────────────────
+// CONSTANTS & STATE
+// ─────────────────────────────────────────────
+var HGAP  = 215;
+var VGAP  = 78;
+var COLORS = ['c-blue','c-green','c-orange','c-purple','c-pink'];
+var NEXT_COLOR = {'c-blue':'c-green','c-green':'c-orange','c-orange':'c-purple','c-purple':'c-pink','c-pink':'c-blue'};
+var COLOR_HEX  = {'c-blue':'#2563EB','c-green':'#16A34A','c-orange':'#EA580C','c-purple':'#7C3AED','c-pink':'#DB2777'};
+
+var nodes      = {};
+var mapScale   = 1;
+var currentTool = 'pan';
+var nodeStyle  = 'filled';
+var selectedId = null;
+var colorTargetId = null;
+var idCounter  = 1;
+var mapHistory = [];
+var histIdx    = -1;
+var isDragging = false;
+var dragNode   = null;
+var dragOX = 0, dragOY = 0;
+var aiModel    = 'claude';
+
+// ─────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────
+function getCW()   { return document.getElementById('canvas-wrap'); }
+function getCX()   { return getCW().offsetWidth  / 2 - 60; }
+function getCY()   { return getCW().offsetHeight / 2 - 30; }
+function getNode(id) { return nodes[id]; }
+
+// ─────────────────────────────────────────────
+// TOOL SELECTION  (globally accessible for onclick)
+// ─────────────────────────────────────────────
+function setTool(t) {
+  currentTool = t;
+  document.querySelectorAll('.tool-btn').forEach(function(b){ b.classList.remove('active'); });
+  var btn = document.getElementById('tb-' + t);
+  if (btn) btn.classList.add('active');
+  getCW().style.cursor = t === 'pan' ? 'grab' : 'default';
+}
+
+// ─────────────────────────────────────────────
+// NODE CREATION
+// ─────────────────────────────────────────────
+function makeNode(parentId, label, isRoot) {
+  var id    = 'n' + (idCounter++);
+  var color = (parentId && nodes[parentId]) ? (NEXT_COLOR[nodes[parentId].color] || 'c-blue') : 'c-blue';
+
+  var wrap = document.createElement('div');
+  wrap.className  = 'node-wrap';
+  wrap.dataset.id = id;
+
+  var el = document.createElement('div');
+  el.className       = 'node ' + nodeStyle + ' ' + color + (isRoot ? ' root' : '');
+  el.dataset.id      = id;
+  el.contentEditable = false;
+  el.textContent     = label;   // ← label visível no nó
+
+  // + button
+  var addBtn = document.createElement('button');
+  addBtn.className   = 'add-btn right';
+  addBtn.textContent = '+';
+  addBtn.onmousedown = function(e){ e.stopPropagation(); e.preventDefault(); };
+  addBtn.onclick     = function(e){ e.stopPropagation(); spawnChild(id); };
+
+  el.appendChild(addBtn);
+
+  if (!isRoot) {
+    var delBtn = document.createElement('button');
+    delBtn.className   = 'del-btn';
+    delBtn.textContent = '×';
+    delBtn.onmousedown = function(e){ e.stopPropagation(); e.preventDefault(); };
+    delBtn.onclick     = function(e){ e.stopPropagation(); deleteNode(id); };
+    el.appendChild(delBtn);
+  }
+
+  wrap.appendChild(el);
+  document.getElementById('nodes-layer').appendChild(wrap);
+
+  wrap.addEventListener('mousedown', function(e){ onNodeMD(e, id); });
+  el.addEventListener('dblclick',    function(e){ e.stopPropagation(); startEdit(id); });
+  el.addEventListener('contextmenu', function(e){ e.preventDefault(); e.stopPropagation(); showColorPicker(id, e); });
+
+  var node = { id:id, label:label, x:0, y:0, color:color, parentId:parentId||null, isRoot:isRoot, children:[], el:el, wrap:wrap };
+  nodes[id] = node;
+
+  if (parentId && nodes[parentId]) nodes[parentId].children.push(id);
+  return node;
+}
+
+function placeNode(node, x, y) {
+  node.x = x; node.y = y;
+  node.wrap.style.left = x + 'px';
+  node.wrap.style.top  = y + 'px';
+}
+
+// ─────────────────────────────────────────────
+// LAYOUT  — children always go RIGHT of parent
+// ─────────────────────────────────────────────
+function doLayout(parentId) {
+  var parent = nodes[parentId];
+  if (!parent) return;
+  var children = parent.children.filter(function(cid){ return !!nodes[cid]; });
+  if (!children.length) return;
+
+  var pH     = parent.el.offsetHeight || 44;
+  var total  = children.length * VGAP;
+  var startY = parent.y + pH / 2 - total / 2 + VGAP / 2 - pH / 2;
+
+  children.forEach(function(cid, i) {
+    placeNode(nodes[cid], parent.x + HGAP, startY + i * VGAP);
+  });
+}
+
+// ─────────────────────────────────────────────
+// SPAWN CHILD
+// ─────────────────────────────────────────────
+function spawnChild(parentId) {
+  var parent = nodes[parentId];
+  if (!parent) return;
+  var child = makeNode(parentId, 'Nova ideia', false);
+  doLayout(parentId);
+  drawConns();
+  saveHistory();
+  setTimeout(function(){ startEdit(child.id); drawConns(); }, 40);
+}
+
+// ─────────────────────────────────────────────
+// DELETE
+// ─────────────────────────────────────────────
+function deleteNode(id) {
+  var n = nodes[id];
+  if (!n || n.isRoot) return;
+
+  function drop(nid) {
+    var nd = nodes[nid];
+    if (!nd) return;
+    nd.children.slice().forEach(drop);
+    nd.wrap.remove();
+    delete nodes[nid];
+  }
+
+  if (n.parentId && nodes[n.parentId]) {
+    nodes[n.parentId].children = nodes[n.parentId].children.filter(function(c){ return c !== id; });
+  }
+  drop(id);
+  if (selectedId === id) selectedId = null;
+  drawConns();
+  saveHistory();
+}
+
+// ─────────────────────────────────────────────
+// DRAG
+// ─────────────────────────────────────────────
+function onNodeMD(e, id) {
+  if (currentTool === 'pan' || e.button !== 0) return;
+  e.stopPropagation();
+  selectNode(id);
+  isDragging = true;
+  dragNode   = nodes[id];
+  dragOX     = e.clientX - dragNode.x;
+  dragOY     = e.clientY - dragNode.y;
+
+  function onMove(e) {
+    if (!isDragging) return;
+    placeNode(dragNode, e.clientX - dragOX, e.clientY - dragOY);
+    drawConns();
+  }
+  function onUp() {
+    isDragging = false; dragNode = null;
+    saveHistory();
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup',   onUp);
+  }
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup',   onUp);
+}
+
+// Canvas pan — set up inside load handler
+function setupPan() {
+  var cw = getCW();
+  cw.addEventListener('mousedown', function(e) {
+    var tgt = e.target;
+    if (tgt === cw || tgt.id === 'dot-bg' || tgt.id === 'conn-canvas' || tgt.id === 'map-root' || tgt.id === 'nodes-layer') {
+      deselectAll();
+      if (currentTool === 'pan') {
+        var sx = e.clientX, sy = e.clientY;
+        function onMove(e) {
+          var dx = e.clientX - sx, dy = e.clientY - sy;
+          sx = e.clientX; sy = e.clientY;
+          Object.values(nodes).forEach(function(n){ placeNode(n, n.x + dx, n.y + dy); });
+          drawConns();
+        }
+        function onUp() {
+          document.removeEventListener('mousemove', onMove);
+          document.removeEventListener('mouseup',   onUp);
+        }
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup',   onUp);
+      }
+    }
+  });
+  cw.addEventListener('wheel', function(e) {
+    e.preventDefault();
+    zoomMap(e.deltaY < 0 ? 0.08 : -0.08);
+  }, { passive: false });
+}
+
+// ─────────────────────────────────────────────
+// SELECT
+// ─────────────────────────────────────────────
+function selectNode(id) {
+  deselectAll();
+  selectedId = id;
+  var n = nodes[id];
+  if (n) n.wrap.classList.add('selected');
+}
+function deselectAll() {
+  selectedId = null;
+  Object.values(nodes).forEach(function(n){ n.wrap.classList.remove('selected'); });
+  hideColorPicker();
+}
+
+// ─────────────────────────────────────────────
+// INLINE EDIT
+// ─────────────────────────────────────────────
+function startEdit(id) {
+  var n = nodes[id];
+  if (!n) return;
+  var el = n.el;
+
+  // Remove buttons from DOM so they don't pollute contentEditable
+  var btns = Array.from(el.querySelectorAll('button'));
+  btns.forEach(function(b){ b.remove(); });
+
+  // Set plain text only
+  el.textContent = n.label;
+  el.contentEditable = true;
+  el.focus();
+
+  // Move caret to end
+  var range = document.createRange();
+  range.selectNodeContents(el);
+  range.collapse(false);
+  window.getSelection().removeAllRanges();
+  window.getSelection().addRange(range);
+
+  function commit() {
+    el.contentEditable = false;
+    var raw = el.textContent.trim();
+    n.label = raw || n.label;
+    rebuildContent(n);
+    saveHistory();
+    el.removeEventListener('blur',    commit);
+    el.removeEventListener('keydown', onKey);
+  }
+  function onKey(e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); el.blur(); }
+    if (e.key === 'Escape') el.blur();
+  }
+  el.addEventListener('blur',    commit);
+  el.addEventListener('keydown', onKey);
+}
+
+function rebuildContent(n) {
+  n.el.textContent = n.label;
+  var addBtn = document.createElement('button');
+  addBtn.className = 'add-btn right';
+  addBtn.textContent = '+';
+  addBtn.onmousedown = function(e){ e.stopPropagation(); e.preventDefault(); };
+  addBtn.onclick = function(e){ e.stopPropagation(); spawnChild(n.id); };
+  n.el.appendChild(addBtn);
+  if (!n.isRoot) {
+    var delBtn = document.createElement('button');
+    delBtn.className = 'del-btn';
+    delBtn.textContent = '×';
+    delBtn.onmousedown = function(e){ e.stopPropagation(); e.preventDefault(); };
+    delBtn.onclick = function(e){ e.stopPropagation(); deleteNode(n.id); };
+    n.el.appendChild(delBtn);
+  }
+}
+
+// ─────────────────────────────────────────────
+// COLOR PICKER
+// ─────────────────────────────────────────────
+function showColorPicker(id, e) {
+  selectNode(id);
+  colorTargetId = id;
+  var p = document.getElementById('color-popup');
+  p.style.left = e.clientX + 'px';
+  p.style.top  = (e.clientY + 8) + 'px';
+  p.classList.add('visible');
+}
+function hideColorPicker() {
+  document.getElementById('color-popup').classList.remove('visible');
+  colorTargetId = null;
+}
+function applyColor(color) {
+  if (!colorTargetId) return;
+  var n = nodes[colorTargetId];
+  if (!n) return;
+  COLORS.forEach(function(c){ n.el.classList.remove(c); });
+  n.el.classList.add(color);
+  n.color = color;
+  hideColorPicker();
+  drawConns();
+  saveHistory();
+}
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('#color-popup') && !e.target.closest('.node')) hideColorPicker();
+});
+
+// ─────────────────────────────────────────────
+// GLOBAL NODE STYLE
+// ─────────────────────────────────────────────
+function setGlobalStyle(s) {
+  nodeStyle = s;
+  Object.values(nodes).forEach(function(n) {
+    n.el.classList.remove('filled','outlined');
+    n.el.classList.add(s);
+  });
+  document.getElementById('st-filled').classList.toggle('active',   s === 'filled');
+  document.getElementById('st-outlined').classList.toggle('active', s === 'outlined');
+}
+
+// ─────────────────────────────────────────────
+// DRAW CONNECTIONS (canvas)
+// ─────────────────────────────────────────────
+function resizeCanvases() {
+  var cw = getCW();
+  var W = cw.offsetWidth, H = cw.offsetHeight;
+
+  // dot grid
+  var dot = document.getElementById('dot-bg');
+  dot.width = W; dot.height = H;
+  var dctx = dot.getContext('2d');
+  dctx.fillStyle = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.10)';
+  for (var x = 28; x < W; x += 28)
+    for (var y = 28; y < H; y += 28) { dctx.beginPath(); dctx.arc(x,y,1,0,Math.PI*2); dctx.fill(); }
+
+  // conn canvas
+  var cc = document.getElementById('conn-canvas');
+  cc.width = W; cc.height = H;
+}
+
+function nodeEdge(node, towardX) {
+  var w = node.el.offsetWidth  || 120;
+  var h = node.el.offsetHeight || 44;
+  return towardX >= node.x + w / 2
+    ? { x: node.x + w, y: node.y + h / 2 }
+    : { x: node.x,     y: node.y + h / 2 };
+}
+
+function drawConns() {
+  var cc  = document.getElementById('conn-canvas');
+  var ctx = cc.getContext('2d');
+  ctx.clearRect(0, 0, cc.width, cc.height);
+
+  Object.values(nodes).forEach(function(child) {
+    if (!child.parentId) return;
+    var parent = nodes[child.parentId];
+    if (!parent) return;
+
+    var childCX = child.x  + (child.el.offsetWidth  || 120) / 2;
+    var from = nodeEdge(parent, childCX);
+    var to   = nodeEdge(child,  parent.x + (parent.el.offsetWidth || 120) / 2);
+
+    var color = COLOR_HEX[child.color] || '#2563EB';
+    var cpDX  = Math.abs(to.x - from.x) * 0.48;
+    var cp1x  = from.x + (from.x < to.x ? cpDX : -cpDX);
+    var cp2x  = to.x   + (from.x < to.x ? -cpDX : cpDX);
+
+    ctx.beginPath();
+    ctx.moveTo(from.x, from.y);
+    ctx.bezierCurveTo(cp1x, from.y, cp2x, to.y, to.x, to.y);
+    ctx.strokeStyle = color;
+    ctx.globalAlpha = 0.5;
+    ctx.lineWidth   = 2;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(to.x, to.y, 3.5, 0, Math.PI * 2);
+    ctx.fillStyle   = color;
+    ctx.globalAlpha = 0.65;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  });
+}
+
+// ─────────────────────────────────────────────
+// ZOOM
+// ─────────────────────────────────────────────
+function zoomMap(delta) {
+  mapScale = Math.max(0.25, Math.min(3, mapScale + delta));
+  document.getElementById('map-root').style.transform = 'scale(' + mapScale + ')';
+  document.getElementById('zoom-pct').textContent = Math.round(mapScale * 100) + '%';
+  drawConns();
+}
+function resetZoom() {
+  mapScale = 1;
+  document.getElementById('map-root').style.transform = '';
+  document.getElementById('zoom-pct').textContent = '100%';
+  drawConns();
+}
+
+// ─────────────────────────────────────────────
+// KEYBOARD
+// ─────────────────────────────────────────────
+document.addEventListener('keydown', function(e) {
+  var a = document.activeElement;
+  if (a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' || a.contentEditable === 'true')) return;
+  if (e.key === 'v' || e.key === 'V') setTool('select');
+  if (e.key === 'h' || e.key === 'H') setTool('pan');
+  if ((e.key === 'Delete' || e.key === 'Backspace') && selectedId) deleteNode(selectedId);
+  if (e.key === 'Tab' && selectedId) { e.preventDefault(); spawnChild(selectedId); }
+  if (e.key === 'F2'  && selectedId) startEdit(selectedId);
+  if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); undoMap(); }
+});
+
+// ─────────────────────────────────────────────
+// HISTORY
+// ─────────────────────────────────────────────
+function saveHistory() {
+  var snap = JSON.stringify(Object.values(nodes).map(function(n) {
+    return { id:n.id, label:n.label, x:n.x, y:n.y, color:n.color, parentId:n.parentId, isRoot:n.isRoot, children:n.children.slice() };
+  }));
+  mapHistory = mapHistory.slice(0, histIdx + 1);
+  mapHistory.push(snap);
+  histIdx++;
+}
+
+function undoMap() {
+  if (histIdx <= 0) return;
+  histIdx--;
+  restoreSnap(JSON.parse(mapHistory[histIdx]));
+}
+
+function restoreSnap(snap) {
+  Object.values(nodes).forEach(function(n){ n.wrap.remove(); });
+  nodes = {}; idCounter = 1;
+  snap.forEach(function(s) {
+    var n = makeNode(null, s.label, s.isRoot);
+    n.id = s.id; n.color = s.color; n.parentId = s.parentId; n.children = s.children.slice();
+    n.wrap.dataset.id = s.id; n.el.dataset.id = s.id;
+    COLORS.forEach(function(c){ n.el.classList.remove(c); });
+    n.el.classList.add(s.color);
+    placeNode(n, s.x, s.y);
+    nodes[s.id] = n;
+  });
+  drawConns();
+}
+
+// ─────────────────────────────────────────────
+// SAVE / LOAD
+// ─────────────────────────────────────────────
+function saveMap() {
+  var data = {
+    title: document.getElementById('map-title').value,
+    nodes: Object.values(nodes).map(function(n) {
+      return { id:n.id, label:n.label, x:n.x, y:n.y, color:n.color, parentId:n.parentId, isRoot:n.isRoot, children:n.children.slice() };
+    })
+  };
+  localStorage.setItem('mapadetarefas_current', JSON.stringify(data));
+  showHint('Mapa salvo ✓');
+}
+
+function loadSaved() {
+  var raw = localStorage.getItem('mapadetarefas_current');
+  if (!raw) return false;
+  try {
+    var data = JSON.parse(raw);
+    document.getElementById('map-title').value = data.title || 'Meu Mapa';
+    restoreSnap(data.nodes);
+    saveHistory();
+    showHint('Mapa carregado ✓');
+    return true;
+  } catch(e) { return false; }
+}
+
+// ─────────────────────────────────────────────
+// EXAMPLE POPUP
+// ─────────────────────────────────────────────
+function hideExamplePopup() {
+  var p = document.getElementById('example-popup');
+  p.classList.add('hidden');
+}
+
+function loadClothingExample() {
+  hideExamplePopup();
+  buildMapFromData({
+    title: 'Marca de Roupas',
+    root: 'Marca de Roupas',
+    branches: [
+      { label: 'Identidade',  color: 'c-pink',   children: ['Nome da marca', 'Logo e cores', 'O que representa'] },
+      { label: 'Produto',     color: 'c-purple',  children: ['Primeira coleção', 'Fornecedor', 'Tamanhos'] },
+      { label: 'Como vender', color: 'c-blue',    children: ['Instagram', 'Loja online', 'Boca a boca'] },
+      { label: 'Dinheiro',    color: 'c-green',   children: ['Quanto investir', 'Preço de venda', 'Primeiro lucro'] }
+    ]
+  });
+}
+
+// ─────────────────────────────────────────────
+// BUILD MAP FROM STRUCTURED DATA
+// ─────────────────────────────────────────────
+function buildMapFromData(data) {
+  Object.values(nodes).forEach(function(n){ n.wrap.remove(); });
+  nodes = {}; idCounter = 1;
+
+  document.getElementById('map-title').value = data.title || data.root || 'Mapa';
+
+  var rootLabel = data.root || data.title || 'Centro';
+  var branches  = data.branches || [];
+
+  var rootNode = makeNode(null, rootLabel, true);
+  var rx = getCX() - 40;
+  var ry = getCY() - 20;
+  placeNode(rootNode, rx, ry);
+
+  // Compute total vertical space
+  var branchHeights = branches.map(function(b){ return Math.max(1, (b.children||[]).length) * VGAP; });
+  var totalH = branchHeights.reduce(function(a,b){ return a+b; }, 0) + Math.max(0, branches.length - 1) * 10;
+  var curY = ry + (rootNode.el.offsetHeight || 44) / 2 - totalH / 2;
+
+  branches.forEach(function(branch, bi) {
+    var color    = branch.color || COLORS[bi % COLORS.length];
+    var children = branch.children || [];
+    var brH      = Math.max(1, children.length) * VGAP;
+    var branchY  = curY + brH / 2 - VGAP / 2;
+
+    var bn = makeNode(rootNode.id, branch.label, false);
+    COLORS.forEach(function(c){ bn.el.classList.remove(c); });
+    bn.el.classList.add(color);
+    bn.color = color;
+    placeNode(bn, rx + HGAP, branchY);
+
+    children.forEach(function(child, ci) {
+      var label = typeof child === 'string' ? child : (child.label || child);
+      var cn = makeNode(bn.id, label, false);
+      COLORS.forEach(function(c){ cn.el.classList.remove(c); });
+      cn.el.classList.add(color);
+      cn.color = color;
+      placeNode(cn, rx + HGAP * 2, curY + ci * VGAP);
+
+      if (typeof child === 'object' && child.children) {
+        child.children.forEach(function(gcLabel, gci) {
+          var gcn = makeNode(cn.id, gcLabel, false);
+          COLORS.forEach(function(c){ gcn.el.classList.remove(c); });
+          gcn.el.classList.add(color);
+          gcn.color = color;
+          placeNode(gcn, rx + HGAP * 3, curY + ci * VGAP + gci * VGAP);
+        });
+      }
+    });
+
+    curY += brH + 10;
+  });
+
+  drawConns();
+  saveHistory();
+}
+
+// ─────────────────────────────────────────────
+// FINANCE EXAMPLE (default)
+// ─────────────────────────────────────────────
+function buildFinanceExample() {
+  buildMapFromData({
+    title: 'Finanças Pessoais',
+    root:  'Finanças Pessoais',
+    branches: [
+      {
+        label: 'O que entra',
+        color: 'c-green',
+        children: ['Salário fixo', 'Freelance', 'Outras rendas']
+      },
+      {
+        label: 'O que sai',
+        color: 'c-orange',
+        children: ['Moradia e contas', 'Alimentação', 'Transporte', 'Lazer']
+      },
+      {
+        label: 'O que guardar',
+        color: 'c-blue',
+        children: ['Reserva de emergência', 'Meta do mês']
+      },
+      {
+        label: 'Próximo passo',
+        color: 'c-pink',
+        children: ['Montar planilha', 'Revisar todo mês']
+      }
+    ]
+  });
+}
+
+// ─────────────────────────────────────────────
+// EXPORT
+// ─────────────────────────────────────────────
+function openExportModal()  { document.getElementById('export-modal').classList.add('visible'); }
+function closeExportModal() { document.getElementById('export-modal').classList.remove('visible'); }
+document.getElementById('export-modal').addEventListener('click', function(e) {
+  if (e.target === document.getElementById('export-modal')) closeExportModal();
+});
+
+function showLoading(msg) {
+  document.getElementById('loading-msg').textContent = msg;
+  document.getElementById('loading').classList.add('visible');
+}
+function hideLoading() { document.getElementById('loading').classList.remove('visible'); }
+
+function captureMap() {
+  var toHide = document.querySelectorAll('.toolbar, header, .zoom-bar, .hint, .add-btn, .del-btn, .example-popup');
+  var hidden = [];
+  toHide.forEach(function(el){ hidden.push([el, el.style.display]); el.style.display = 'none'; });
+  var prevSel = selectedId; deselectAll();
+
+  return html2canvas(getCW(), { backgroundColor:'#F4F2EE', scale:2, useCORS:true, logging:false })
+    .then(function(canvas) {
+      hidden.forEach(function(pair){ pair[0].style.display = pair[1]; });
+      if (prevSel) selectNode(prevSel);
+      return canvas;
+    });
+}
+
+function exportPNG() {
+  closeExportModal();
+  showLoading('Gerando imagem...');
+  captureMap().then(function(canvas) {
+    var link = document.createElement('a');
+    link.download = (document.getElementById('map-title').value || 'mapa-de-tarefas') + '.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+    showHint('Imagem baixada ✓');
+    hideLoading();
+  }).catch(function(e){ showHint('Erro ao gerar imagem.'); console.error(e); hideLoading(); });
+}
+
+function exportPDF() {
+  closeExportModal();
+  showLoading('Gerando PDF...');
+  captureMap().then(function(canvas) {
+    var imgData   = canvas.toDataURL('image/png');
+    var jspdf     = window.jspdf;
+    var pdf       = new jspdf.jsPDF({ orientation: canvas.width > canvas.height ? 'landscape' : 'portrait', unit:'mm', format:'a4' });
+    var pageW     = canvas.width > canvas.height ? 297 : 210;
+    var pageH     = canvas.width > canvas.height ? 210 : 297;
+    var aspect    = canvas.width / canvas.height;
+    var imgW      = pageW, imgH = pageW / aspect;
+    if (imgH > pageH) { imgH = pageH; imgW = pageH * aspect; }
+    pdf.addImage(imgData,'PNG',(pageW-imgW)/2,(pageH-imgH)/2,imgW,imgH);
+    pdf.save((document.getElementById('map-title').value||'mapa-de-tarefas')+'.pdf');
+    showHint('PDF baixado ✓');
+    hideLoading();
+  }).catch(function(e){ showHint('Erro ao gerar PDF.'); console.error(e); hideLoading(); });
+}
+
+// ─────────────────────────────────────────────
+// AI PANEL
+// ─────────────────────────────────────────────
+var AI_EXAMPLES = [
+  'Quero lançar um produto digital nos próximos 3 meses. Preciso organizar: desenvolvimento do produto, estratégia de marketing digital, captação de clientes, precificação e suporte pós-venda.',
+  'Preciso montar uma estratégia de redes sociais para uma marca de esportes. Envolve criação de conteúdo, calendário editorial, parcerias com influenciadores, tráfego pago e análise de resultados.',
+  'Quero organizar meu planejamento financeiro pessoal. Inclui controle de gastos mensais, reserva de emergência, investimentos, metas de curto e longo prazo e redução de dívidas.',
+  'Vou criar uma campanha de marketing para um evento de beach tennis. Preciso cobrir: divulgação, patrocínios, inscrições, logística, comunicação nas redes sociais e pós-evento.'
+];
+
+function toggleAIPanel()  { document.getElementById('ai-panel').classList.toggle('open'); }
+function fillExample(i)   { document.getElementById('ai-prompt').value = AI_EXAMPLES[i]; document.getElementById('ai-prompt').focus(); }
+
+function selectModel(m) {
+  aiModel = m;
+  document.getElementById('model-claude').classList.toggle('active', m === 'claude');
+  document.getElementById('model-gpt').classList.toggle('active',   m === 'gpt');
+  document.getElementById('gpt-key-row').style.display = m === 'gpt' ? 'block' : 'none';
+}
+
+function setAIStatus(msg, type) {
+  var el = document.getElementById('ai-status');
+  el.textContent = msg;
+  el.className = 'ai-status' + (type ? ' ' + type : '');
+}
+
+function setGenerating(on) {
+  var btn = document.getElementById('ai-gen-btn');
+  btn.disabled = on;
+  btn.classList.toggle('loading', on);
+}
+
+function generateMap() {
+  var prompt = document.getElementById('ai-prompt').value.trim();
+  if (!prompt) { setAIStatus('Descreva sua ideia antes de gerar.', 'error'); return; }
+
+  setGenerating(true);
+  setAIStatus('Gerando seu mapa...');
+  document.getElementById('ai-result-box').classList.remove('visible');
+
+  // Chama o backend seguro — chave nunca exposta ao browser
+  fetch('/api/generate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt: prompt })
+  })
+  .then(function(r) {
+    return r.json().then(function(data) {
+      if (!r.ok) throw new Error(data.error || 'Erro ' + r.status);
+      return data;
+    });
+  })
+  .then(function(mapData) {
+    var rb = document.getElementById('ai-result-box');
+    rb.textContent = '✓ ' + (mapData.branches ? mapData.branches.length : 0) + ' áreas geradas';
+    rb.classList.add('visible');
+    buildMapFromData(mapData);
+    setAIStatus('Mapa gerado com sucesso! ✓', 'success');
+    hideExamplePopup();
+    setTimeout(function(){ document.getElementById('ai-panel').classList.remove('open'); }, 1500);
+  })
+  .catch(function(err) {
+    console.error(err);
+    setAIStatus('Erro: ' + err.message, 'error');
+  })
+  .finally(function() {
+    setGenerating(false);
+  });
+}
+
+// ─────────────────────────────────────────────
+// DARK MODE
+// ─────────────────────────────────────────────
+var isDark = false;
+function toggleDark() {
+  isDark = !isDark;
+  document.body.classList.toggle('dark', isDark);
+  document.getElementById('icon-moon').style.display = isDark ? 'none'  : 'block';
+  document.getElementById('icon-sun').style.display  = isDark ? 'block' : 'none';
+  // redraw dot grid with correct color
+  resizeCanvases();
+  drawConns();
+  localStorage.setItem('mapadetarefas_dark', isDark ? '1' : '0');
+}
+
+// ─────────────────────────────────────────────
+// HINT
+// ─────────────────────────────────────────────
+var hintTimer;
+function showHint(msg) {
+  var h = document.getElementById('hint');
+  h.textContent = msg;
+  h.style.opacity = '1';
+  clearTimeout(hintTimer);
+  hintTimer = setTimeout(function(){ h.style.opacity = '0.4'; }, 3200);
+}
+
+// ─────────────────────────────────────────────
+// START
+// ─────────────────────────────────────────────
+window.addEventListener('load', function() {
+  // restore dark mode pref
+  if (localStorage.getItem('mapadetarefas_dark') === '1') toggleDark();
+
+  resizeCanvases();
+  setupPan();
+
+  // Initial cursor for pan tool
+  getCW().style.cursor = 'grab';
+
+  var saved = localStorage.getItem('mapadetarefas_current');
+  if (saved) {
+    var loaded = loadSaved();
+    if (loaded) {
+      // Don't show popup for saved maps
+      hideExamplePopup();
+    }
+  } else {
+    buildFinanceExample();
+    // Show popup after brief delay
+    setTimeout(function(){
+      document.getElementById('example-popup').classList.remove('hidden');
+    }, 1200);
+  }
+
+  setTimeout(drawConns, 200);
+  setTimeout(function(){ document.getElementById('hint').style.opacity = '0.4'; }, 6000);
+});
+
+window.addEventListener('resize', function() { resizeCanvases(); drawConns(); });
+</script>
+</body>
+</html>
