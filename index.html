@@ -57,6 +57,12 @@ body.dark .style-toggle{border-color:var(--border)}
 
 body{background:var(--bg);font-family:'Lato',sans-serif;color:var(--text);height:100vh;overflow:hidden;user-select:none}
 
+/* previne seleção de texto em todo o canvas e nós durante drag */
+#canvas-wrap, #map-root, #nodes-layer, .node-wrap, .node{
+  user-select:none;
+  -webkit-user-select:none;
+}
+
 /* ── HEADER ── */
 header{position:fixed;top:0;left:0;right:0;height:50px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 18px;gap:12px;z-index:300}
 .logo{font-family:'Syne',sans-serif;font-weight:700;font-size:16px;white-space:nowrap}
@@ -1243,17 +1249,30 @@ function generateMap() {
 }
 
 function callClaude(prompt) {
-  var fullPrompt = 'Gere um mapa mental em JSON válido sobre o tema a seguir. Responda APENAS o JSON, sem markdown, sem explicação.\n' +
-    'Formato exato: {"root":"Nome central (até 4 palavras)","branches":[{"label":"Área","children":["item1","item2"]}]}\n' +
-    'Regras: 4 a 7 branches, 2 a 5 filhos por branch, labels curtos (4-5 palavras), português brasileiro.\n\n' +
-    'Tema: ' + prompt;
-  return fetch('/api/generate', {
+  var SYSTEM = [
+    'Voce e um assistente especializado em mapas mentais.',
+    'Gere um mapa mental em JSON valido. Responda APENAS o JSON, sem markdown, sem explicacao.',
+    'Formato:',
+    '{"root":"Nome central (ate 4 palavras)","branches":[{"label":"Area","children":["item1","item2"]}]}',
+    'Regras: 4 a 7 branches, 2 a 5 filhos por branch, labels curtos (4-5 palavras), portugues brasileiro.'
+  ].join(' ');
+
+  return fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ prompt: fullPrompt })
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1000,
+      system: SYSTEM,
+      messages: [{ role:'user', content: prompt }]
+    })
   }).then(function(r) {
-    if (!r.ok) return r.json().then(function(e){ throw new Error(e.error || 'Erro ' + r.status); });
+    if (!r.ok) throw new Error('Erro API Claude: ' + r.status);
     return r.json();
+  }).then(function(data) {
+    var text = data.content.map(function(b){ return b.text || ''; }).join('');
+    text = text.replace(/```json|```/g,'').trim();
+    return JSON.parse(text);
   });
 }
 
@@ -1408,6 +1427,12 @@ function renderTourStep() {
   box.style.left = bx + 'px';
   box.style.top  = by + 'px';
 }
+
+// Previne seleção de texto durante drag/pan
+document.addEventListener('dragstart', function(e){ e.preventDefault(); });
+document.addEventListener('selectstart', function(e){
+  if (isDragging || e.target.closest('#canvas-wrap')) e.preventDefault();
+});
 
 // ─────────────────────────────────────────────
 // MAPS MENU
